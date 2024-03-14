@@ -39,7 +39,7 @@ int min_A6;
 int min_A7;
 int min_A9;
 
-int a = 1; //black line>>+1,white line>>0
+int a = 0; //black line>>+1,white line>>0
 
 int DL5;
 int DL4;
@@ -71,6 +71,68 @@ long enc_err;
 
 int flag = 0;
 
+
+//Game Parameters
+int gems=0;
+char wall_color = 'N';
+
+////---------Color Sensor2---------
+#define S02 35
+#define S12 37
+#define S22 41
+#define S32 39
+
+#define OUT2 43
+
+int arr2[] = {70, 120, 90, 140, 30, 100};
+
+int red_min2 = arr2[0];
+int red_max2 = arr2[1];
+int green_min2 = arr2[2];
+int green_max2 = arr2[3];
+int blue_min2 = arr2[4];
+int blue_max2 = arr2[5];
+
+
+
+float red2 = 0; float redColor2 = 0; float rednew2;
+float green2 = 0; float greenColor2 = 0; float greennew2;
+float blue2 = 0; float blueColor2 = 0; float bluenew2;
+
+float total2;
+String color2;
+
+//---------Color Sensor1---------
+#define S01 29
+#define S11 27
+#define S21 23
+#define S31 25
+
+#define OUT1 45
+int delaytime = 10;
+
+int arr1[] = {70, 120, 90, 140, 30, 100};
+
+int red_min1 = arr1[0];
+int red_max1 = arr1[1];
+int green_min1 = arr1[2];
+int green_max1 = arr1[3];
+int blue_min1 = arr1[4];
+int blue_max1 = arr1[5];
+
+
+
+float red1 = 0; float redColor1 = 0; float rednew1;
+float green1 = 0; float greenColor1 = 0; float greennew1;
+float blue1 = 0; float blueColor1 = 0; float bluenew1;
+
+float total1;
+String color1;
+String color;
+int countR, countG, countB;
+//----------colour sensor end---------------
+
+
 //Declare Functions
 void line_flw();
 void invt_line_flw();
@@ -87,6 +149,8 @@ void fwd_enc(int duration);
 void bwd_enc(int duration);
 void fwd_enc_spd(int duration,int spd);
 void dgtl();
+char colorDetect1();
+char colorDetect2();
 
 
 
@@ -105,7 +169,28 @@ void setup() {
   pinMode(rightF, OUTPUT);
   pinMode(rightB, OUTPUT);
 
-  
+   //------------colour sensor----------
+  pinMode(S01, OUTPUT);
+  pinMode(S11, OUTPUT);
+  pinMode(S21, OUTPUT);
+  pinMode(S31, OUTPUT);
+  pinMode(OUT1, INPUT);
+
+  digitalWrite(S01, HIGH);
+  digitalWrite(S11, HIGH);
+
+  pinMode(S02, OUTPUT);
+  pinMode(S12, OUTPUT);
+  pinMode(S22, OUTPUT);
+  pinMode(S32, OUTPUT);
+  pinMode(OUT2, INPUT);
+
+  digitalWrite(S02, HIGH);
+  digitalWrite(S12, HIGH);
+
+  //-----------colour sensor end------------
+
+
   while (digitalRead(start_but) != HIGH) {
     delay(1);
   }
@@ -118,44 +203,43 @@ void loop() {
     if (flag == 0) {
     dgtl();
     while (true) {
-      if (DR5 == a * 1) {
+      if (DR4 == a * 1 && DL4 == a * 1) {
         break;
       }
       line_flw();
       dgtl();
     }
-    if (DR5 == a * 1) {
+    if (DR4 == a * 1 && DL4 == a * 1) {
       brk();
       delay(500);
-      fwd_enc(175);
-      trn_rgt();
+      fwd_enc(100);
+      brk();
+      delay(500);
+      //color detection
+      wall_color = colorDetect1();
 
+      bwd_enc(650);
+      trn_180();
+      delay(500);
       dgtl();
+
       while (true) {
-        if (DL4 == a * 1 && DR4 == a * 1) {
+        if (DR5 == a * 1 ) {
           break;
         }
         line_flw();
         dgtl();
       }
-      if (DL4 == a * 1 && DR4 == a * 1) {
+
+      if (DR5 == a * 1) {
         brk();
         delay(500);
         fwd_enc(100);
-        //fwd_enc(100);
-        brk();
-        delay(1000);
-        
-       
-        //        mtr_cmd(0, 0);
-        //        delay(1000);
-        bwd_enc(650);
-        trn_180();
-        delay(500);
-
+        trn_rgt();
         dgtl();
+
         while (true) {
-          if (DL5 == a * 1 && DR5 == a * 1) {
+          if (DR5 == a * 1 ) {
             break;
           }
           line_flw();
@@ -165,6 +249,17 @@ void loop() {
         delay(1000);
         fwd_enc(175);
         trn_rgt();
+
+        while (!(DR5 == a * 1 && DL5 == a * 1)) {
+          line_flw();
+          dgtl();
+        }
+        brk();
+        delay(500);
+        fwd_enc(100);
+        trn_lft();
+        dgtl();
+        
         flag = 1;
         brk();
         
@@ -682,7 +777,7 @@ void fwd_enc_spd(int duration,int spd){
 /////////////////////////////////////////////////////////////////IR Digitalize///////////////////////////////////////////////////////////////////////////
 void dgtl() {
 
- int refA8 = (max_A8 + min_A8) / 2;
+ 
  int refA0 = (max_A0 + min_A0) / 2;
  int refA1 = (max_A1 + min_A1) / 2;
  int refA2 = (max_A2 + min_A2) / 2;
@@ -691,6 +786,7 @@ void dgtl() {
  int refA5 = (max_A5 + min_A5) / 2;
   int refA6 = (max_A6 + min_A6) / 2;
  int refA7 = (max_A7 + min_A7) / 2;
+ int refA8 = (max_A8 + min_A8) / 2;
  int refA9 = (max_A9 + min_A9) / 2;
 
   if (analogRead(A8) > refA8) {
@@ -791,3 +887,105 @@ void dgtl() {
 
 }
 /////////////////////////////////////////////////////////////////IR Digitalize///////////////////////////////////////////////////////////////////////////
+
+////////////////////////////////////////////////////////////////Color Detection /////////////////////////////////////////////////////////////////////////
+
+char colorDetect1() {
+
+  digitalWrite(S21, LOW);
+  digitalWrite(S31, LOW);
+  red1 = pulseIn(OUT1, LOW);
+  redColor1 = map(red1, red_min1, red_max1, 255, 0);
+
+  digitalWrite(S21, HIGH);
+  digitalWrite(S31, HIGH);
+  green1 = pulseIn(OUT1, LOW);
+  greenColor1 = map(green1, green_min1, green_max1, 255, 0);
+
+  digitalWrite(S21, LOW);
+  digitalWrite(S31, HIGH);
+  blue1 = pulseIn(OUT1, LOW);
+  blueColor1 = map(blue1, blue_min1, blue_max1, 255, 0);
+
+  total1 = red1 + green1 + blue1;
+
+
+  rednew1 = (red1 / total1) * 100;
+  greennew1 = (green1 / total1) * 100;
+  bluenew1 = (blue1 / total1) * 100;
+
+  if (rednew1 < greennew1 && rednew1 < bluenew1) { //RED
+    return 'R';
+  }
+  else if (rednew1 > greennew1 && greennew1 < bluenew1) { //GREEN
+    return 'G';
+  }
+  else if (bluenew1 < greennew1 && rednew1 > bluenew1) { //BLUE
+    return 'B';
+  }else{
+    return 'N';
+  }
+  //    Serial.print(R1);
+  //    Serial.print(" ");
+  //
+  //    Serial.print(G);
+  //    Serial.print(" ");
+  //
+  //
+  //    Serial.print(B);
+  //    Serial.print(" ");
+  //
+  //    Serial.println();
+  //    delay(100);
+
+}
+
+char colorDetect2() {
+
+  digitalWrite(S22, LOW);
+  digitalWrite(S32, LOW);
+  red2 = pulseIn(OUT2, LOW);
+  redColor2 = map(red2, red_min2, red_max2, 255, 0);
+
+  digitalWrite(S22, HIGH);
+  digitalWrite(S32, HIGH);
+  green2 = pulseIn(OUT2, LOW);
+  greenColor2 = map(green2, green_min2, green_max2, 255, 0);
+
+  digitalWrite(S22, LOW);
+  digitalWrite(S32, HIGH);
+  blue2 = pulseIn(OUT2, LOW);
+  blueColor2 = map(blue2, blue_min2, blue_max2, 255, 0);
+
+  total2 = red2 + green2 + blue2;
+
+
+  rednew2 = (red2 / total2) * 100;
+  greennew2 = (green2 / total2) * 100;
+  bluenew2 = (blue2 / total2) * 100;
+
+  if (rednew1 < greennew1 && rednew1 < bluenew1) { //RED
+    return 'R';
+  }
+  else if (rednew1 > greennew1 && greennew1 < bluenew1) { //GREEN
+    return 'G';
+  }
+  else if (bluenew1 < greennew1 && rednew1 > bluenew1) { //BLUE
+    return 'B';
+
+  }else{
+    return 'N';
+  }
+  //    Serial.print(R1);
+  //    Serial.print(" ");
+  //
+  //    Serial.print(G);
+  //    Serial.print(" ");
+  //
+  //
+  //    Serial.print(B);
+  //    Serial.print(" ");
+  //
+  //    Serial.println();
+  //    delay(100);
+}
