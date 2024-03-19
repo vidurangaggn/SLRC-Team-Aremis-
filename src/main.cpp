@@ -2,42 +2,42 @@
 #include <Encoder.h>
 
 Encoder LEnc(18, 19); 
-Encoder REnc(20, 21);
+Encoder REnc(2, 3);
 
-#define LM 2
-#define RM 7
+#define LM 8
+#define RM 9
 
-#define leftF 3
-#define leftB 4
+#define leftF 47
+#define leftB 49
 
-#define rightF 6
-#define rightB 5
+#define rightF 51
+#define rightB 53
 
 #define start_but 51 //start button
 
-int max_A8;//L5
-int max_A0;//L4
-int max_A1;//L3
-int max_A2;//L2
-int max_A3;//L1
-int max_A4;//R1
-int max_A5;//R2
-int max_A6;//R3
-int max_A7;//R4
-int max_A9;//R5
+int max_A8 = 34;//L5
+int max_A0 = 1008;//L4
+int max_A1= 1008;//L3
+int max_A2= 1008;//L2
+int max_A3= 1008;//L1
+int max_A4= 1008;//R1
+int max_A5= 1008;//R2
+int max_A6= 1008;//R3
+int max_A7= 1008;//R4
+int max_A9= 34;//R5
 
 //B_DL A10
 //B_DR A11
-int min_A8;
-int min_A0;
-int min_A1;
-int min_A2;
-int min_A3;
-int min_A4;
-int min_A5;
-int min_A6;
-int min_A7;
-int min_A9;
+int min_A8 = 17;
+int min_A0 = 847;
+int min_A1 = 890;
+int min_A2 = 880;
+int min_A3 = 887;
+int min_A4 = 886;
+int min_A5 = 862;
+int min_A6 = 864;
+int min_A7 = 827;
+int min_A9 = 17;
 
 int a = 0; //black line>>+1,white line>>0
 
@@ -75,6 +75,7 @@ int flag = 0;
 //Game Parameters
 int gems=0;
 char wall_color = 'N';
+float kp = 0.1;
 
 ////---------Color Sensor2---------
 #define S02 35
@@ -151,16 +152,26 @@ void fwd_enc_spd(int duration,int spd);
 void dgtl();
 char colorDetect1();
 char colorDetect2();
+void buzz();
+void line_flw_fwd();
+
+
 
 
 
 void setup() {
+
+  Serial.begin(9600);
+  Serial3.begin(9600);
   // put your setup code here, to run once:
-  for (int pin = A0; pin <= A15; pin++) {
-    pinMode(pin, INPUT);
-  }
+  // for (int pin = A0; pin <= A15; pin++) {
+  //   pinMode(pin, INPUT);
+  // }
  
-  cal();
+  
+  
+
+  pinMode(17,OUTPUT);//Buzzer
 
   pinMode(LM, OUTPUT);
   pinMode(RM, OUTPUT);
@@ -189,94 +200,156 @@ void setup() {
   digitalWrite(S12, HIGH);
 
   //-----------colour sensor end------------
+   buzz();
+   cal();
+   buzz();
 
-
-  while (digitalRead(start_but) != HIGH) {
-    delay(1);
-  }
+  // while (digitalRead(start_but) != HIGH) {
+  //   delay(1);
+  // }
   fwd_enc(400);
 
 }
 
 void loop() {
-
-    if (flag == 0) {
-    dgtl();
-    while (true) {
-      if (DR4 == a * 1 && DL4 == a * 1) {
-        break;
-      }
-      line_flw();
-      dgtl();
-    }
-    if (DR4 == a * 1 && DL4 == a * 1) {
-      brk();
-      delay(500);
-      fwd_enc(100);
-      brk();
-      delay(500);
-      //color detection
-      wall_color = colorDetect1();
-
-      bwd_enc(650);
-      trn_180();
-      delay(500);
-      dgtl();
-
-      while (true) {
-        if (DR5 == a * 1 ) {
-          break;
-        }
-        line_flw();
-        dgtl();
-      }
-
-      if (DR5 == a * 1) {
-        brk();
-        delay(500);
-        fwd_enc(100);
-        trn_rgt();
-        dgtl();
-
-        while (true) {
-          if (DR5 == a * 1 ) {
-            break;
-          }
-          line_flw();
-          dgtl();
-        }
-        brk();
-        delay(1000);
-        fwd_enc(175);
-        trn_rgt();
-
-        while (!(DR5 == a * 1 && DL5 == a * 1)) {
-          line_flw();
-          dgtl();
-        }
-        brk();
-        delay(500);
-        fwd_enc(100);
-        trn_lft();
-        dgtl();
-        
-        flag = 1;
-        brk();
-        
-      }
-    }
-  }
   
+
+  //   if (flag == 0) {
+  //   dgtl();
+   
+
+  //   while (true) {
+  //     if (DR4 == a * 1 && DL4 == a * 1) {
+  //       break;
+  //     }
+  //     if(DL5 == a*1){
+  //      fwd_enc(100);
+  //     }
+
+  //     line_flw();
+  //     dgtl();
+  //   }
+  //   if (DR4 == a * 1 && DL4 == a * 1) {
+  //     brk();
+  //     delay(500);
+  //     fwd_enc(100);
+  //     brk();
+  //     delay(500);
+  //     //color detection
+  //     wall_color = colorDetect1();
+
+  //     bwd_enc(650);
+  //     trn_180();
+  //     delay(500);
+  //     dgtl();
+
+  //     while (true) {
+  //       if (DR5 == a * 1 ) {
+  //         break;
+  //       }
+  //       line_flw();
+  //       dgtl();
+  //     }
+
+  //     if (DR5 == a * 1) {
+  //       brk();
+  //       delay(500);
+  //       fwd_enc(100);
+  //       trn_rgt();
+  //       dgtl();
+
+  //       while (true) {
+  //         if (DR5 == a * 1 ) {
+  //           break;
+  //         }
+  //         line_flw();
+  //         dgtl();
+  //       }
+  //       brk();
+  //       delay(1000);
+  //       fwd_enc(175);
+  //       trn_rgt();
+
+  //       while (!(DR5 == a * 1 && DL5 == a * 1)) {
+  //         line_flw();
+  //         dgtl();
+  //       }
+  //       brk();
+  //       delay(500);
+  //       fwd_enc(100);
+  //       trn_lft();
+  //       dgtl();
+        
+  //       flag = 1;
+  //       brk();
+        
+  //     }
+  //   }
+  // }
+  
+
+  //line_flw_fwd();
+  line_flw();
 
 }
 
 
 //////////////////////////////////////////////////////////////////////LINE FOLLOWER///////////////////////////////////////////////////////////////////////
-void line_flw() {
-  float kp = 2.5; //     //uk p=2    //uk 2   //uk 2
-  float kd = 110;//0.4;    //uk d=30   //uk 40   //uk 110 
-  float ki = 0.02;//0.01;    //uk i=0.3    //uk 0.8   //uk 0.02
+void line_flw() {//White line
 
+
+  float kp = 3.5;
+  float kd = 20;
+  float ki = 1;
+
+  
+  int R1 = map(analogRead(A4), min_A4,max_A4/*45 , 770*/ , 50, 0);
+  int L1 = map(analogRead(A3), min_A3,max_A3/*40 , 660*/ , 50, 0);
+  int R2 = map(analogRead(A5), min_A5,max_A5/*45 , 770*/ , 50, 0);
+  int L2 = map(analogRead(A2), min_A2,max_A2/*40 , 660*/ , 50, 0);
+  int L3 = map(analogRead(A1), min_A1,max_A1/*45 , 700*/ , 50, 0);
+  int R3 = map(analogRead(A6), min_A6,max_A6/*40 , 700*/ , 50, 0);
+  int L4 = map(analogRead(A0), min_A0,max_A0/*45 , 700*/ , 50, 0);
+  int R4 = map(analogRead(A7), min_A7,max_A7/*40 , 700*/ , 50, 0);
+  
+
+  lf_err=0.125*(L1-R1)+0.25*(L2-R2)+0.5*(L3-R3)+1*(L4-R4);
+
+  int lf_dif = lf_err * kp + (lf_err - lf_prverr) * kd + (lf_err + lf_prverr)* ki;
+  Serial.print("ERR ");
+  Serial.print(lf_dif);
+  Serial.print(" ");
+  Serial.print("Kp ");
+  Serial.println(kp);
+
+  Serial3.print("ERR ");
+  Serial3.print(lf_dif);
+  Serial3.print(" ");
+  Serial3.print("Kp ");
+  Serial3.println(kp);
+  
+  mtr_cmd(80 - lf_dif/3, 80 + lf_dif/3);
+
+  lf_prverr = lf_err;
+
+  
+ 
+}
+
+void buzz(){
+
+ digitalWrite(17, HIGH);
+ delay(100);
+ digitalWrite(17, LOW);
+
+}
+
+
+void invt_line_flw() {//Black Line
+
+  float kp = 0.2;
+  float kd = 0;
+  float ki = 0.0002;
  
   int R2 = map(analogRead(A5), min_A5,max_A5/*45 , 770*/ , 0, 50);
   int L2 = map(analogRead(A2), min_A2,max_A2/*40 , 660*/ , 0, 50);
@@ -286,36 +359,16 @@ void line_flw() {
   lf_err=(L2-R2)+0.5*(L4-R4);
 
   int lf_dif = lf_err * kp + (lf_err - lf_prverr) * kd + (lf_err + lf_prverr)* ki;
+  Serial.println(lf_dif);
+  Serial3.println(lf_dif);
   
-  mtr_cmd(120 - lf_dif, 120 + lf_dif);
+   mtr_cmd(90 - lf_dif, 90 + lf_dif);
 
   lf_prverr = lf_err;
-
-}
-
-
-
-
-
-void invt_line_flw() {
-
-  float kp = 2.5; //     //uk p=2    //uk 2   //uk 2
-  float kd = 110;//0.4;    //uk d=30   //uk 40   //uk 110 
-  float ki = 0.02;//0.01;    //uk i=0.3    //uk 0.8   //uk 0.02
 
  
-  int R2 = map(analogRead(A5), min_A5,max_A5/*45 , 770*/ , 50, 0);
-  int L2 = map(analogRead(A2), min_A2,max_A2/*40 , 660*/ , 50, 0);
-  int L4 = map(analogRead(A0), min_A0,max_A0/*45 , 700*/ , 50, 0);
-  int R4 = map(analogRead(A7), min_A4,max_A4/*40 , 700*/ , 50, 0);
 
-  lf_err=(L2-R2)+0.5*(L4-R4);
-
-  int lf_dif = lf_err * kp + (lf_err - lf_prverr) * kd + (lf_err + lf_prverr)* ki;
-  
-  mtr_cmd(100 - lf_dif, 100 + lf_dif);
-
-  lf_prverr = lf_err;
+ 
 
 }
 
@@ -339,6 +392,30 @@ void line_flw_bwd() {
   int lf_dif = lf_bwd_err * kp + (lf_bwd_err - lf_bwd_prverr) * kd;
 
   mtr_cmd(-1*(100 - lf_dif), -1*(100 + lf_dif));
+
+  lf_bwd_prverr = lf_bwd_err;
+
+}
+
+void line_flw_fwd() {
+  float kp = 0.01;
+  float kd = 0.0001;
+
+  int R4 = map(analogRead(A7), min_A7 , max_A7 , 0, -400);
+  int R3 = map(analogRead(A6), min_A6 , max_A6 , 0, -300);
+  int R2 = map(analogRead(A5), min_A5 , max_A5 , 0, -200);
+  int R1 = map(analogRead(A4), min_A4 , max_A4 , 0, -100);
+  int L1 = map(analogRead(A3), min_A3 , max_A3 , 0, 100);
+  int L2 = map(analogRead(A2), min_A2 , max_A2 , 0, 200);
+  int L3 = map(analogRead(A1), min_A1 , max_A1 , 0, 300);
+  int L4 = map(analogRead(A0), min_A0 , max_A0 , 0, 400);
+
+  lf_bwd_err = L4 + L3 + L2 + L1 + R1 + R2 + R3 + R4;
+
+  int lf_dif = lf_bwd_err * kp + (lf_bwd_err - lf_bwd_prverr) * kd;
+
+
+  mtr_cmd((80 - lf_dif), (80 + lf_dif));
 
   lf_bwd_prverr = lf_bwd_err;
 
@@ -448,6 +525,7 @@ void cal() {
   min_A7 = 1024;
   min_A9 = 1024;
 
+ 
   for (int i = 0; i < 5000; i++) {
     //Serial.println("calibrating");
     int A8_Reading = analogRead(A8);
@@ -551,6 +629,8 @@ void cal() {
 
 
   }
+
+ 
   /*Serial.print(min_A7);
     Serial.print("    ");
     Serial.print(min_A6);
