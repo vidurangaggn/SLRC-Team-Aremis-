@@ -77,42 +77,17 @@ int gems=0;
 char wall_color = 'N';
 float kp = 0.1;
 
-////---------Color Sensor2---------
-#define S02 35
-#define S12 37
-#define S22 41
-#define S32 39
+//---------Color Sensor1 U---------
+#define S01 44
+#define S11 36
+#define S21 42
+#define S31 46
 
-#define OUT2 43
-
-int arr2[] = {70, 120, 90, 140, 30, 100};
-
-int red_min2 = arr2[0];
-int red_max2 = arr2[1];
-int green_min2 = arr2[2];
-int green_max2 = arr2[3];
-int blue_min2 = arr2[4];
-int blue_max2 = arr2[5];
-
-
-
-float red2 = 0; float redColor2 = 0; float rednew2;
-float green2 = 0; float greenColor2 = 0; float greennew2;
-float blue2 = 0; float blueColor2 = 0; float bluenew2;
-
-float total2;
-String color2;
-
-//---------Color Sensor1---------
-#define S01 29
-#define S11 27
-#define S21 23
-#define S31 25
-
-#define OUT1 45
+#define OUT1 38
+#define CS1_LED 40
 int delaytime = 10;
 
-int arr1[] = {70, 120, 90, 140, 30, 100};
+int arr1[] = {70, 120, 90, 150, 30, 100};
 
 int red_min1 = arr1[0];
 int red_max1 = arr1[1];
@@ -131,6 +106,34 @@ float total1;
 String color1;
 String color;
 int countR, countG, countB;
+
+////---------Color Sensor2 Front---------
+#define S02 32
+#define S12 26
+#define S22 22
+#define S32 24
+#define CS2_LED 30
+
+#define OUT2 28
+
+int arr2[] = {70, 120, 90, 150, 30, 100};
+
+int red_min2 = arr2[0];
+int red_max2 = arr2[1];
+int green_min2 = arr2[2];
+int green_max2 = arr2[3];
+int blue_min2 = arr2[4];
+int blue_max2 = arr2[5];
+
+
+
+float red2 = 0; float redColor2 = 0; float rednew2;
+float green2 = 0; float greenColor2 = 0; float greennew2;
+float blue2 = 0; float blueColor2 = 0; float bluenew2;
+
+float total2;
+String color2;
+
 //----------colour sensor end---------------
 
 
@@ -180,15 +183,20 @@ void setup() {
   pinMode(rightF, OUTPUT);
   pinMode(rightB, OUTPUT);
 
-   //------------colour sensor----------
+  //------------colour sensor----------
   pinMode(S01, OUTPUT);
   pinMode(S11, OUTPUT);
   pinMode(S21, OUTPUT);
   pinMode(S31, OUTPUT);
   pinMode(OUT1, INPUT);
 
+  pinMode(CS1_LED, OUTPUT);
+  pinMode(CS2_LED, OUTPUT);
+
   digitalWrite(S01, HIGH);
   digitalWrite(S11, HIGH);
+  digitalWrite(CS1_LED, HIGH);
+  digitalWrite(CS2_LED, HIGH);
 
   pinMode(S02, OUTPUT);
   pinMode(S12, OUTPUT);
@@ -298,8 +306,8 @@ void loop() {
 void line_flw() {//White line
 
 
-  float kp = 3.5;
-  float kd = 20;
+  float kp = 2;
+  float kd = 8;
   float ki = 1;
 
   
@@ -328,7 +336,7 @@ void line_flw() {//White line
   Serial3.print("Kp ");
   Serial3.println(kp);
   
-  mtr_cmd(80 - lf_dif/3, 80 + lf_dif/3);
+  mtr_cmd((90 - lf_dif/3),(90 + lf_dif/3));
 
   lf_prverr = lf_err;
 
