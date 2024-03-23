@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <Encoder.h>
 #include <Servo.h>
+#include <NewPing.h>
 
 Encoder LEnc(18, 19); 
 Encoder REnc(2, 3);
@@ -26,6 +27,8 @@ Servo armX;
 //Front Ultra Sonic Sensor
 #define trigPinFront 4
 #define echoPinFront 5
+
+NewPing sonar(trigPinFront, echoPinFront, 100);
 
 
 int max_A8 = 37;//L5
@@ -236,9 +239,9 @@ void setup() {
    cal();
    buzz();
 
-  while (digitalRead(run_sw) != HIGH) {
-    delay(500);
-  }
+  // while (digitalRead(run_sw) != HIGH) {
+  //   delay(500);
+  // }
   fwd_enc(400);
   
   //ARM test
@@ -326,7 +329,46 @@ void loop() {
   //     }
   //   }
   // }
-  if (flag == 0) {
+  if(flag==0){
+    dgtl();
+    while(true){
+      if(DL5==a && DL4==a && DL3==a && DL2==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+    
+      brk();
+      delay(500);
+      fwd_enc(500);
+      delay(200);
+      while(true){
+          if(DR5 == a && DR4 == a && DR3 == a && DR2 == a && DL2 == a && DL3 == a && DL4 == a && DL5==a){
+              break;
+          }
+          line_flw();
+          dgtl();
+      }
+      brk();
+      delay(500);
+
+
+
+      // fwd_enc(300);
+      // colorDetect1();
+      // delay(500);
+      // bwd_enc(300);
+      // trn_180();  
+      // delay(500);
+      // fwd_enc(400);
+
+      
+      flag = 1;
+
+  }
+  
+  else if (flag == -1) {
     dgtl();
     while(true){
       if(DL5==a && DL4==a && DL3==a && DL2==a){
@@ -341,11 +383,11 @@ void loop() {
       fwd_enc(300);
       trn_lft();
       delay(200);
-      fwd_enc(400);
+      line_flw_dur(1000);
       flag = 1;
   }
 
-  else if(flag==1){
+  else if(flag==-1){
     dgtl();
     while(true){
 
@@ -370,6 +412,11 @@ void loop() {
   //line_flw();
   }
 
+//////////////////////////////////////////////////Distance//////////////////////////////////////////////////////
+void getDistance() {
+  int distance = sonar.ping_cm();
+  return distance;
+} 
 
 
 
