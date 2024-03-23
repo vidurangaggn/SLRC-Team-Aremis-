@@ -1,5 +1,6 @@
 #include <Arduino.h>
 #include <Encoder.h>
+#include <Servo.h>
 
 Encoder LEnc(18, 19); 
 Encoder REnc(2, 3);
@@ -15,29 +16,41 @@ Encoder REnc(2, 3);
 
 #define start_but 51 //start button
 
-int max_A8 = 34;//L5
-int max_A0 = 1008;//L4
-int max_A1= 1008;//L3
-int max_A2= 1008;//L2
-int max_A3= 1008;//L1
-int max_A4= 1008;//R1
-int max_A5= 1008;//R2
-int max_A6= 1008;//R3
-int max_A7= 1008;//R4
-int max_A9= 34;//R5
+//Arm 
+#define armY_Pin 10
+#define armX_Pin 11
+
+Servo armY;
+Servo armX;
+
+//Front Ultra Sonic Sensor
+#define trigPinFront 4
+#define echoPinFront 5
+
+
+int max_A8 = 37;//L5
+int max_A0 = 987;//L4
+int max_A1= 988;//L3
+int max_A2= 988;//L2
+int max_A3= 988;//L1
+int max_A4= 988;//R1
+int max_A5= 991;//R2
+int max_A6= 991;//R3
+int max_A7= 992;//R4
+int max_A9= 37;//R5
 
 //B_DL A10
 //B_DR A11
-int min_A8 = 17;
-int min_A0 = 847;
-int min_A1 = 890;
-int min_A2 = 880;
-int min_A3 = 887;
-int min_A4 = 886;
-int min_A5 = 862;
-int min_A6 = 864;
-int min_A7 = 827;
-int min_A9 = 17;
+int min_A8 = 14;
+int min_A0 = 140;
+int min_A1 = 67;
+int min_A2 = 57;
+int min_A3 = 163;
+int min_A4 = 165;
+int min_A5 = 149;
+int min_A6 = 240;
+int min_A7 = 322;
+int min_A9 = 14;
 
 int a = 0; //black line>>+1,white line>>0
 
@@ -71,6 +84,8 @@ long enc_err;
 
 int flag = 0;
 
+//Run Switch
+#define run_sw 23
 
 //Game Parameters
 int gems=0;
@@ -157,6 +172,8 @@ char colorDetect1();
 char colorDetect2();
 void buzz();
 void line_flw_fwd();
+void catch_obj();
+void drop_obj();
 
 
 
@@ -172,9 +189,16 @@ void setup() {
   // }
  
   
-  
+  //Servo (Arms)
+  pinMode(armY_Pin, OUTPUT);
+  pinMode(armX_Pin, OUTPUT);
+
+  armY.attach(armY_Pin);
+  armX.attach(armX_Pin);
+
 
   pinMode(17,OUTPUT);//Buzzer
+  pinMode(run_sw, INPUT);//Run Switch
 
   pinMode(LM, OUTPUT);
   pinMode(RM, OUTPUT);
@@ -212,10 +236,18 @@ void setup() {
    cal();
    buzz();
 
-  // while (digitalRead(start_but) != HIGH) {
-  //   delay(1);
-  // }
+  while (digitalRead(run_sw) != HIGH) {
+    delay(500);
+  }
   fwd_enc(400);
+  
+  //ARM test
+  // catch_obj();
+  // delay(2000);
+  // drop_obj();
+
+  //Turn Test
+  //trn_180();
 
 }
 
@@ -294,13 +326,218 @@ void loop() {
   //     }
   //   }
   // }
+  if (flag == 0) {
+    dgtl();
+    while(true){
+      if(DL5==a && DL4==a && DL3==a && DL2==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+    
+      brk();
+      delay(500);
+      fwd_enc(300);
+      trn_lft();
+      delay(200);
+      fwd_enc(400);
+      flag = 1;
+  }
+
+  else if(flag==1){
+    dgtl();
+    while(true){
+
+        if(DR5==a && DR4==a && DR3==a && DR2==a ){
+          break;
+
+        } 
+        
+        line_flw();
+        dgtl();
+      }
+      brk();
+      delay(500);
+      fwd_enc(280);
+      trn_rgt();
+      dgtl();
+      flag=2;
+  }
+      
+
+
+  //line_flw();
+  }
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////Turn///////////////////////////////////////////////////////////////////////////
+void trn_180(){
+  int enc_val=610;
+  mtr_cmd(0, 0);
+  delay(1000);
+
+  ev1 = LEnc.read();
+  ev2 = REnc.read();
+  LnewPosition = 0;
+  RnewPosition = 0;
+
+  while (RnewPosition > -enc_val*2 && LnewPosition < enc_val*2) {
+
+    mtr_cmd(110, -110);
+    LnewPosition = LEnc.read() - ev1;
+    RnewPosition = REnc.read() - ev2;
+  }
+
+
+  mtr_cmd(0, 0);
+  delay(1000);
+
+  fwd_enc(175);
+}
+
+
+void trn_lft() {
+  int enc_val=600;
   
 
-  //line_flw_fwd();
-  line_flw();
+  mtr_cmd(0, 0);
+  delay(1000);
+
+  ev1 = LEnc.read();
+  ev2 = REnc.read();
+  LnewPosition = 0;
+  RnewPosition = 0;
+
+
+  while (LnewPosition > -enc_val && RnewPosition < enc_val) {
+
+    mtr_cmd(-110, 110);
+    LnewPosition = LEnc.read() - ev1;
+    RnewPosition = REnc.read() - ev2;
+  }
+
+  mtr_cmd(0, 0);
+  delay(1000);
+
+  fwd_enc(175);
+
 
 }
 
+
+void trn_rgt() {
+
+  int enc_val = 600;
+  
+
+  mtr_cmd(0, 0);
+  delay(1000);
+
+  ev1 = LEnc.read();
+  ev2 = REnc.read();
+  LnewPosition = 0;
+  RnewPosition = 0;
+
+  while (RnewPosition > -enc_val && LnewPosition < enc_val) {
+
+    mtr_cmd(110, -110);
+    LnewPosition = LEnc.read() - ev1;
+    RnewPosition = REnc.read() - ev2;
+  }
+
+  
+  mtr_cmd(0, 0);
+  delay(1000);
+
+  fwd_enc(175);  
+  
+}
+
+void trn_180_at_c(){
+  int enc_val=650;
+  mtr_cmd(0, 0);
+  delay(1000);
+
+  ev1 = LEnc.read();
+  ev2 = REnc.read();
+  LnewPosition = 0;
+  RnewPosition = 0;
+
+  while (RnewPosition > -enc_val*2 && LnewPosition < enc_val*2) {
+
+    mtr_cmd(150, -150);
+    LnewPosition = LEnc.read() - ev1;
+    RnewPosition = REnc.read() - ev2;
+  }
+
+
+  mtr_cmd(0, 0);
+  delay(1000);
+}
+
+void trn_180_at_maze(){
+  int enc_val=650;
+  mtr_cmd(0, 0);
+  delay(1000);
+
+  ev1 = LEnc.read();
+  ev2 = REnc.read();
+  LnewPosition = 0;
+  RnewPosition = 0;
+
+  while (LnewPosition > -enc_val*2 && RnewPosition < enc_val*2) {
+
+    mtr_cmd(-150, +150);
+    LnewPosition = LEnc.read() - ev1;
+    RnewPosition = REnc.read() - ev2;
+  }
+
+
+  mtr_cmd(0, 0);
+  delay(1000);
+}
+///////////////////////////////////////////////////////////////////////////Turn///////////////////////////////////////////////////////////////////////////
+
+
+////////////////////////////////////////////////////////////////////////////ARM///////////////////////////////////////////////////////////////////////////
+
+
+void catch_obj() {
+  
+  armX.write(0);
+  delay(500);
+  armY.write(40);
+  delay(1000);
+  armX.write(95);
+  delay(500);
+  armY.write(120);
+
+  // int arm_pos = 0;
+  // while (arm_pos < 180) {
+  //   arm_pos += 1;
+  //   armX.write(arm_pos);
+  //   delay(10);
+  // }
+}
+
+void drop_obj() {
+  
+  armY.write(60);
+  delay(500);
+  armX.write(0);
+  delay(1000);
+  armY.write(120);
+
+  // int arm_pos = 0;
+  // while (arm_pos < 180) {
+  //   arm_pos += 1;
+  //   armX.write(arm_pos);
+  //   delay(10);
+  // }
+}
 
 //////////////////////////////////////////////////////////////////////LINE FOLLOWER///////////////////////////////////////////////////////////////////////
 void line_flw() {//White line
@@ -336,13 +573,24 @@ void line_flw() {//White line
   Serial3.print("Kp ");
   Serial3.println(kp);
   
-  mtr_cmd((90 - lf_dif/3),(90 + lf_dif/3));
+  mtr_cmd((90 - lf_dif/2.5),(90 + lf_dif/2.5));
 
   lf_prverr = lf_err;
 
   
  
 }
+
+void line_flw_dur(int time_){
+  stt_time=millis();
+  elp_time=0;
+  while(time_>elp_time){
+    line_flw();
+    elp_time=millis()-stt_time;
+  }
+}
+
+
 
 void buzz(){
 
@@ -370,7 +618,7 @@ void invt_line_flw() {//Black Line
   Serial.println(lf_dif);
   Serial3.println(lf_dif);
   
-   mtr_cmd(90 - lf_dif, 90 + lf_dif);
+   mtr_cmd(80 - lf_dif, 80 + lf_dif);
 
   lf_prverr = lf_err;
 
@@ -430,14 +678,7 @@ void line_flw_fwd() {
 }
 
 
-void line_flw_dur(int time_){
-  stt_time=millis();
-  elp_time=0;
-  while(time_>elp_time){
-    line_flw();
-    elp_time=millis()-stt_time;
-  }
-}
+
 //////////////////////////////////////////////////////////////////////LINE FOLLOWER///////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////MORTOR///////////////////////////////////////////////////////////////////////////////
 void mtr_cmd(int lm, int rm) {
@@ -519,6 +760,10 @@ void brk(){
   
 }
 ///////////////////////////////////////////////////////////////////////////////////////MORTOR////////////////////////////////////////////////////////////////////
+
+
+
+
 ///////////////////////////////////////////////////////////////////Calibrate///////////////////////////////////////////////////////////////////////
 
 void cal() {
@@ -675,131 +920,6 @@ void cal() {
 }
 ///////////////////////////////////////////////////////////////////////////Calibrate///////////////////////////////////////////////////////////////////////
 
-/////////////////////////////////////////////////////////////////////////////Turn///////////////////////////////////////////////////////////////////////////
-void trn_180(){
-  int enc_val=600;
-  mtr_cmd(0, 0);
-  delay(1000);
-
-  ev1 = LEnc.read();
-  ev2 = REnc.read();
-  LnewPosition = 0;
-  RnewPosition = 0;
-
-  while (RnewPosition > -enc_val*2 && LnewPosition < enc_val*2) {
-
-    mtr_cmd(150, -150);
-    LnewPosition = LEnc.read() - ev1;
-    RnewPosition = REnc.read() - ev2;
-  }
-
-
-  mtr_cmd(0, 0);
-  delay(1000);
-}
-
-
-void trn_lft() {
-  int enc_val=600;
-  
-
-  mtr_cmd(0, 0);
-  delay(1000);
-
-  ev1 = LEnc.read();
-  ev2 = REnc.read();
-  LnewPosition = 0;
-  RnewPosition = 0;
-
-
-  while (LnewPosition > -enc_val && RnewPosition < enc_val) {
-
-    mtr_cmd(-150, 150);
-    LnewPosition = LEnc.read() - ev1;
-    RnewPosition = REnc.read() - ev2;
-  }
-
-  mtr_cmd(0, 0);
-  delay(1000);
-
-   fwd_enc(175);
-
-
-}
-
-
-void trn_rgt() {
-
-  int enc_val = 750;
-  
-
-  mtr_cmd(0, 0);
-  delay(1000);
-
-  ev1 = LEnc.read();
-  ev2 = REnc.read();
-  LnewPosition = 0;
-  RnewPosition = 0;
-
-  while (RnewPosition > -enc_val && LnewPosition < enc_val) {
-
-    mtr_cmd(120, -120);
-    LnewPosition = LEnc.read() - ev1;
-    RnewPosition = REnc.read() - ev2;
-  }
-
-  
-  mtr_cmd(0, 0);
-  delay(1000);
-
-  fwd_enc(175);  
-  
-}
-
-void trn_180_at_c(){
-  int enc_val=650;
-  mtr_cmd(0, 0);
-  delay(1000);
-
-  ev1 = LEnc.read();
-  ev2 = REnc.read();
-  LnewPosition = 0;
-  RnewPosition = 0;
-
-  while (RnewPosition > -enc_val*2 && LnewPosition < enc_val*2) {
-
-    mtr_cmd(150, -150);
-    LnewPosition = LEnc.read() - ev1;
-    RnewPosition = REnc.read() - ev2;
-  }
-
-
-  mtr_cmd(0, 0);
-  delay(1000);
-}
-
-void trn_180_at_maze(){
-  int enc_val=650;
-  mtr_cmd(0, 0);
-  delay(1000);
-
-  ev1 = LEnc.read();
-  ev2 = REnc.read();
-  LnewPosition = 0;
-  RnewPosition = 0;
-
-  while (LnewPosition > -enc_val*2 && RnewPosition < enc_val*2) {
-
-    mtr_cmd(-150, +150);
-    LnewPosition = LEnc.read() - ev1;
-    RnewPosition = REnc.read() - ev2;
-  }
-
-
-  mtr_cmd(0, 0);
-  delay(1000);
-}
-///////////////////////////////////////////////////////////////////////////Turn///////////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////Forward PID///////////////////////////////////////////////////////////////////////////
 void fwd_enc(int duration){
@@ -813,12 +933,14 @@ void fwd_enc(int duration){
   while (elp_time<=duration) {
     enc_err=(-1)*LnewPosition+RnewPosition;
 
-    mtr_cmd(150+enc_err,150-enc_err);
+    mtr_cmd(120+enc_err,120-enc_err);
     
     LnewPosition = LEnc.read() - ev1;
     RnewPosition = REnc.read() - ev2;
     elp_time=millis()-stt_time;
   }
+  mtr_cmd(0, 0);
+
 }
 
 
@@ -951,26 +1073,26 @@ void dgtl() {
   else {
     DR5 = 0;
   }
-  /*Serial.print(DL5);
-  Serial.print("    ");
-  Serial.print(DL4);
-  Serial.print("    ");
-  Serial.print(DL3);
-  Serial.print("    ");
-  Serial.print(DL2);
-  Serial.print("    ");
-  Serial.print(DL1);
-  Serial.print("    ");
-  Serial.print(DR1);
-  Serial.print("    ");
-  Serial.print(DR2);
-  Serial.print("    ");
-  Serial.print(DR3);
-  Serial.print("    ");
-  Serial.print(DR4);
-  Serial.print("    ");
-  Serial.print(DR5);
-  Serial.println("    ")*/;
+  // Serial.print(DL5);
+  // Serial.print("    ");
+  // Serial.print(DL4);
+  // Serial.print("    ");
+  // Serial.print(DL3);
+  // Serial.print("    ");
+  // Serial.print(DL2);
+  // Serial.print("    ");
+  // Serial.print(DL1);
+  // Serial.print("    ");
+  // Serial.print(DR1);
+  // Serial.print("    ");
+  // Serial.print(DR2);
+  // Serial.print("    ");
+  // Serial.print(DR3);
+  // Serial.print("    ");
+  // Serial.print(DR4);
+  // Serial.print("    ");
+  // Serial.print(DR5);
+  // Serial.println("    ");
 
 
 }
