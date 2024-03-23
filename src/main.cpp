@@ -177,6 +177,8 @@ void buzz();
 void line_flw_fwd();
 void catch_obj();
 void drop_obj();
+int getDistance();  
+void trnPrecise180();
 
 
 
@@ -341,10 +343,11 @@ void loop() {
     
       brk();
       delay(500);
-      fwd_enc(500);
+      fwd_enc(100);
       delay(200);
-      while(true){
-          if(DR5 == a && DR4 == a && DR3 == a && DR2 == a && DL2 == a && DL3 == a && DL4 == a && DL5==a){
+      dgtl();
+      while(true){//Wall detection
+          if(DR5 == a && DR4 == a && DR3 == a && DR2 == a && DL2 == a && DL3 == a && DL4 == a && DL5==a ||  getDistance()<4){
               break;
           }
           line_flw();
@@ -352,42 +355,53 @@ void loop() {
       }
       brk();
       delay(500);
-
-
-
-      // fwd_enc(300);
-      // colorDetect1();
-      // delay(500);
-      // bwd_enc(300);
-      // trn_180();  
-      // delay(500);
-      // fwd_enc(400);
-
+      // while(true){
+      //     if(getDistance()<4){
+      //         break;
+      //     }
+      //     fwd_enc(50); 
+      //     brk();
+      //     delay(100);       
+      // }
+      wall_color = colorDetect2();//Wall color detection
+      if(wall_color=='B'){
+        buzz();
+      }else{
+        buzz();
+        delay(100);
+        buzz();
+      }
+      delay(500);
+      bwd_enc(100);
+      trn_180();
+      //trnPrecise180();  //Trn 180 at wall detection area
+      delay(500);
+      fwd_enc(200);
       
       flag = 1;
 
-  }
-  
-  else if (flag == -1) {
+
+  }else if(flag==1){//First turn
     dgtl();
     while(true){
-      if(DL5==a && DL4==a && DL3==a && DL2==a){
-          break; 
+
+        if(DR5==a && DR4==a && DR3==a && DR2==a ){
+          break;
+
+        } 
+        
+        line_flw();
+        dgtl();
       }
-      line_flw();
-      dgtl();
-    }
-    
       brk();
       delay(500);
-      fwd_enc(300);
-      trn_lft();
-      delay(200);
-      line_flw_dur(1000);
-      flag = 1;
+      fwd_enc(20);
+      trn_rgt();
+      dgtl();
+      flag=2;
   }
 
-  else if(flag==-1){
+  else if(flag==2){
     dgtl();
     while(true){
 
@@ -405,6 +419,23 @@ void loop() {
       trn_rgt();
       dgtl();
       flag=2;
+  }else if (flag == -1) {
+    dgtl();
+    while(true){
+      if(DL5==a && DL4==a && DL3==a && DL2==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+    
+      brk();
+      delay(500);
+      fwd_enc(300);
+      trn_lft();
+      delay(200);
+      line_flw_dur(1000);
+      flag = 1;
   }
       
 
@@ -413,7 +444,7 @@ void loop() {
   }
 
 //////////////////////////////////////////////////Distance//////////////////////////////////////////////////////
-void getDistance() {
+int getDistance() {
   int distance = sonar.ping_cm();
   return distance;
 } 
@@ -421,8 +452,9 @@ void getDistance() {
 
 
 /////////////////////////////////////////////////////////////////////////////Turn///////////////////////////////////////////////////////////////////////////
-void trn_180(){
-  int enc_val=610;
+void trn_120(){
+
+  int enc_val=400;
   mtr_cmd(0, 0);
   delay(1000);
 
@@ -430,8 +462,46 @@ void trn_180(){
   ev2 = REnc.read();
   LnewPosition = 0;
   RnewPosition = 0;
+  dgtl();
+  while (RnewPosition > -enc_val && LnewPosition < enc_val) {
 
-  while (RnewPosition > -enc_val*2 && LnewPosition < enc_val*2) {
+    mtr_cmd(110, -110);
+    LnewPosition = LEnc.read() - ev1;
+    RnewPosition = REnc.read() - ev2;
+  
+  }
+}
+void trnToWhiteLine(){
+  dgtl();
+  while(DR1==a && DL1==a){
+    mtr_cmd(110, -110);
+    dgtl();
+    delay(500);
+  }
+
+
+}
+
+void trnPrecise180(){
+  trn_120();
+  delay(50);
+  trnToWhiteLine();
+
+}
+
+
+
+void trn_180(){
+  int enc_val=540;
+  mtr_cmd(0, 0);
+  delay(1000);
+
+  ev1 = LEnc.read();
+  ev2 = REnc.read();
+  LnewPosition = 0;
+  RnewPosition = 0;
+  dgtl();
+  while (RnewPosition > -enc_val*2 && LnewPosition < enc_val*2 ) {
 
     mtr_cmd(110, -110);
     LnewPosition = LEnc.read() - ev1;
@@ -473,6 +543,46 @@ void trn_lft() {
 
 
 }
+
+// void trn_60(){
+
+//   int enc_val=400;
+//   mtr_cmd(0, 0);
+//   delay(1000);
+
+//   ev1 = LEnc.read();
+//   ev2 = REnc.read();
+//   LnewPosition = 0;
+//   RnewPosition = 0;
+//   dgtl();
+//   while (LnewPosition > -enc_val && RnewPosition < enc_val){
+
+//     mtr_cmd(-110, 110);
+//     LnewPosition = LEnc.read() - ev1;
+//     RnewPosition = REnc.read() - ev2;
+  
+//   }
+// }
+
+// void trnToWhiteLinelft(){
+//   dgtl();
+//   while(DR1==a && DL1==a){
+//     mtr_cmd(-110, 110);
+//     dgtl();
+//     delay(500);
+//   }
+
+
+// }
+
+// void trnPreciselft(){
+//   trn_120();
+//   delay(50);
+//   trnToWhiteLinelft();
+
+// }
+
+
 
 
 void trn_rgt() {
