@@ -28,7 +28,8 @@ Servo armX;
 #define trigPinFront 4
 #define echoPinFront 5
 
-NewPing sonar(trigPinFront, echoPinFront, 100);
+
+// NewPing sonar(trigPinFront, echoPinFront, 100);
 
 
 int max_A8 = 37;//L5
@@ -179,8 +180,11 @@ void catch_obj();
 void drop_obj();
 int getDistance();  
 void trnPrecise180();
-
-
+void trn_Precice_rgt();
+void trnToWhiteLine180();
+void trnToWhiteLinergt();
+void trnToWhiteLinelft();
+void line_flw_circle();
 
 
 
@@ -219,6 +223,9 @@ void setup() {
   pinMode(S31, OUTPUT);
   pinMode(OUT1, INPUT);
 
+  pinMode(trigPinFront,OUTPUT);
+  pinMode(echoPinFront,  INPUT);
+
   pinMode(CS1_LED, OUTPUT);
   pinMode(CS2_LED, OUTPUT);
 
@@ -226,6 +233,8 @@ void setup() {
   digitalWrite(S11, HIGH);
   digitalWrite(CS1_LED, HIGH);
   digitalWrite(CS2_LED, HIGH);
+
+
 
   pinMode(S02, OUTPUT);
   pinMode(S12, OUTPUT);
@@ -251,86 +260,13 @@ void setup() {
   // delay(2000);
   // drop_obj();
 
-  //Turn Test
-  //trn_180();
+ 
 
 }
 
 void loop() {
   
 
-  //   if (flag == 0) {
-  //   dgtl();
-   
-
-  //   while (true) {
-  //     if (DR4 == a * 1 && DL4 == a * 1) {
-  //       break;
-  //     }
-  //     if(DL5 == a*1){
-  //      fwd_enc(100);
-  //     }
-
-  //     line_flw();
-  //     dgtl();
-  //   }
-  //   if (DR4 == a * 1 && DL4 == a * 1) {
-  //     brk();
-  //     delay(500);
-  //     fwd_enc(100);
-  //     brk();
-  //     delay(500);
-  //     //color detection
-  //     wall_color = colorDetect1();
-
-  //     bwd_enc(650);
-  //     trn_180();
-  //     delay(500);
-  //     dgtl();
-
-  //     while (true) {
-  //       if (DR5 == a * 1 ) {
-  //         break;
-  //       }
-  //       line_flw();
-  //       dgtl();
-  //     }
-
-  //     if (DR5 == a * 1) {
-  //       brk();
-  //       delay(500);
-  //       fwd_enc(100);
-  //       trn_rgt();
-  //       dgtl();
-
-  //       while (true) {
-  //         if (DR5 == a * 1 ) {
-  //           break;
-  //         }
-  //         line_flw();
-  //         dgtl();
-  //       }
-  //       brk();
-  //       delay(1000);
-  //       fwd_enc(175);
-  //       trn_rgt();
-
-  //       while (!(DR5 == a * 1 && DL5 == a * 1)) {
-  //         line_flw();
-  //         dgtl();
-  //       }
-  //       brk();
-  //       delay(500);
-  //       fwd_enc(100);
-  //       trn_lft();
-  //       dgtl();
-        
-  //       flag = 1;
-  //       brk();
-        
-  //     }
-  //   }
-  // }
   if(flag==0){
     dgtl();
     while(true){
@@ -347,23 +283,32 @@ void loop() {
       delay(200);
       dgtl();
       while(true){//Wall detection
-          if(DR5 == a && DR4 == a && DR3 == a && DR2 == a && DL2 == a && DL3 == a && DL4 == a && DL5==a ||  getDistance()<4){
+          if(getDistance()<7){  
               break;
           }
           line_flw();
           dgtl();
+          delay(10);
       }
       brk();
       delay(500);
-      // while(true){
-      //     if(getDistance()<4){
-      //         break;
-      //     }
-      //     fwd_enc(50); 
-      //     brk();
-      //     delay(100);       
-      // }
+      while(true){
+          if(getDistance()<5){
+              break;
+          }
+          fwd_enc(50); 
+          delay(100);   
+          buzz();
+          delay(100);
+          buzz();
+          delay (100);
+          buzz();
+               
+      }
+      delay(500);
       wall_color = colorDetect2();//Wall color detection
+      delay(500);
+
       if(wall_color=='B'){
         buzz();
       }else{
@@ -372,11 +317,11 @@ void loop() {
         buzz();
       }
       delay(500);
-      bwd_enc(100);
-      trn_180();
+      bwd_enc(150);
+      trnToWhiteLine180();
       //trnPrecise180();  //Trn 180 at wall detection area
       delay(500);
-      fwd_enc(200);
+      fwd_enc(100);
       
       flag = 1;
 
@@ -395,13 +340,13 @@ void loop() {
       }
       brk();
       delay(500);
-      fwd_enc(20);
-      trn_rgt();
+      fwd_enc(200); // current position
+      trnToWhiteLinergt(); // right turn
       dgtl();
       flag=2;
   }
 
-  else if(flag==2){
+  else if(flag==2){//second turn Rgt
     dgtl();
     while(true){
 
@@ -416,11 +361,16 @@ void loop() {
       brk();
       delay(500);
       fwd_enc(280);
-      trn_rgt();
+      trnToWhiteLinergt(); // right turn
       dgtl();
-      flag=2;
-  }else if (flag == -1) {
+      flag=3;
+
+  }else if (flag == 3) {//T junction
     dgtl();
+    buzz();
+    delay(100);
+    buzz();
+
     while(true){
       if(DL5==a && DL4==a && DL3==a && DL2==a){
           break; 
@@ -432,11 +382,98 @@ void loop() {
       brk();
       delay(500);
       fwd_enc(300);
-      trn_lft();
+      trnToWhiteLinelft();
       delay(200);
       line_flw_dur(1000);
-      flag = 1;
+      flag = 4;
+  }else if(flag == 4){//Color circle
+
+    dgtl();
+    while(true){
+      if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+    
+      brk();
+      delay(500);
+      fwd_enc(460);
+      trn_lft();
+      delay(200);
+      char color = colorDetect1();// Detect Floor Color
+      if(color != wall_color){
+        trn_180();
+      }
+
+      delay(200);
+      fwd_enc(300);
+      flag = 5;
+
+  }else if(flag == 5){//Turn After Color circle
+    dgtl();
+    buzz();
+    delay(100);
+    buzz();
+     
+    while(true){
+      if((DR5==a && DR4==a && DR3==a && DR2==a) || (DL5==a && DL4==a && DL3==a && DL2==a)){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+      brk();
+      delay(500);
+      if(DR5==a && DR4==a && DR3==a && DR2==a){
+         fwd_enc(300);
+         trnToWhiteLinergt();
+        delay(200);
+        line_flw_dur(1000);
+      }else{
+        fwd_enc(300);
+        trnToWhiteLinelft();
+        delay(200);
+        line_flw_dur(1000);
+      }
+      
+      flag = 6;
+
+
+  }else if(flag == 6){//Object detection Circle
+      while(true){
+        if(DR5==a && DR4==a && DL4==a && DL5==a){
+          break;
+        }
+        line_flw_circle();
+        dgtl();
+      }
+
+      brk();
+      delay(500);
+      fwd_enc(300);
+      trnToWhiteLinelft();
+      delay(200);
+      
+
+      while(true){
+        if(DL5==a && DL4==a){
+          break;
+        }
+        line_flw();
+        dgtl();
+      }
+      brk();
+      delay(500);
+      fwd_enc(200);
+      trnToWhiteLinelft();
+      delay(500);
+      
+      flag = 7;
+
   }
+
       
 
 
@@ -445,14 +482,24 @@ void loop() {
 
 //////////////////////////////////////////////////Distance//////////////////////////////////////////////////////
 int getDistance() {
-  int distance = sonar.ping_cm();
+
+  digitalWrite(trigPinFront, LOW);
+  delayMicroseconds(2) ;
+  digitalWrite(trigPinFront, HIGH);
+  delayMicroseconds(30);
+  digitalWrite(trigPinFront, LOW);
+
+  long duration  = pulseIn(echoPinFront, HIGH);
+  int distance = duration * 0.034 / 2;
+
+  //int distance = sonar.ping_cm();
   return distance;
 } 
 
 
 
 /////////////////////////////////////////////////////////////////////////////Turn///////////////////////////////////////////////////////////////////////////
-void trn_120(){
+void trn_Precide_180(){
 
   int enc_val=400;
   mtr_cmd(0, 0);
@@ -471,21 +518,18 @@ void trn_120(){
   
   }
 }
-void trnToWhiteLine(){
+void trnToWhiteLine180(){
+
+  trn_Precide_180();
   dgtl();
-  while(DR1==a && DL1==a){
+  while(!(DR1==a && DL1==a)){
     mtr_cmd(110, -110);
+    delay(100);
+    mtr_cmd(0,0);
+    delay(100);
     dgtl();
-    delay(500);
   }
 
-
-}
-
-void trnPrecise180(){
-  trn_120();
-  delay(50);
-  trnToWhiteLine();
 
 }
 
@@ -544,47 +588,6 @@ void trn_lft() {
 
 }
 
-// void trn_60(){
-
-//   int enc_val=400;
-//   mtr_cmd(0, 0);
-//   delay(1000);
-
-//   ev1 = LEnc.read();
-//   ev2 = REnc.read();
-//   LnewPosition = 0;
-//   RnewPosition = 0;
-//   dgtl();
-//   while (LnewPosition > -enc_val && RnewPosition < enc_val){
-
-//     mtr_cmd(-110, 110);
-//     LnewPosition = LEnc.read() - ev1;
-//     RnewPosition = REnc.read() - ev2;
-  
-//   }
-// }
-
-// void trnToWhiteLinelft(){
-//   dgtl();
-//   while(DR1==a && DL1==a){
-//     mtr_cmd(-110, 110);
-//     dgtl();
-//     delay(500);
-//   }
-
-
-// }
-
-// void trnPreciselft(){
-//   trn_120();
-//   delay(50);
-//   trnToWhiteLinelft();
-
-// }
-
-
-
-
 void trn_rgt() {
 
   int enc_val = 600;
@@ -612,7 +615,86 @@ void trn_rgt() {
   fwd_enc(175);  
   
 }
+///////////////////////////Precise Right Turn///////////////////////////////
+void trn_Precice_rgt() {
 
+  int enc_val = 200;
+  
+  
+
+  mtr_cmd(0, 0);
+  delay(1000);
+
+  ev1 = LEnc.read();
+  ev2 = REnc.read();
+  LnewPosition = 0;
+  RnewPosition = 0;
+
+  while (RnewPosition > -enc_val && LnewPosition < enc_val) {
+
+    mtr_cmd(110, -110);
+    LnewPosition = LEnc.read() - ev1;
+    RnewPosition = REnc.read() - ev2;
+  }
+  mtr_cmd(0, 0);
+  delay(1000); 
+  
+}
+void trnToWhiteLinergt(){
+
+  trn_Precice_rgt();
+  dgtl();
+  while(!(DR1==a && DL1==a)){
+    mtr_cmd(110, -110);
+    delay(100);
+    mtr_cmd(0,0);
+    delay(100);
+    dgtl();
+  }
+  
+}
+
+
+///////////////////////////iwarai///////////////////////////////////////////
+//////////////////////////////////// Precise left Turn /////////////////////////////////
+void trn_Precice_lft() {
+
+  int enc_val = 200;
+  
+  mtr_cmd(0, 0);
+  delay(1000);
+
+  ev1 = LEnc.read();
+  ev2 = REnc.read();
+  LnewPosition = 0;
+  RnewPosition = 0;
+
+
+  while (LnewPosition > -enc_val && RnewPosition < enc_val) {
+
+    mtr_cmd(-110, 110);
+    LnewPosition = LEnc.read() - ev1;
+    RnewPosition = REnc.read() - ev2;
+  }
+
+  mtr_cmd(0, 0);
+  delay(500);
+  
+}
+void trnToWhiteLinelft(){
+
+  trn_Precice_lft();
+  dgtl();
+  while(!(DR1==a && DL1==a)){
+    mtr_cmd(-110, 110);
+    delay(100);
+    mtr_cmd(0,0);
+    delay(100);
+    dgtl();
+  }
+  
+}
+//////////////////////////////////////////////////////////////////////////////////////////////////////
 void trn_180_at_c(){
   int enc_val=650;
   mtr_cmd(0, 0);
@@ -731,6 +813,47 @@ void line_flw() {//White line
   Serial3.println(kp);
   
   mtr_cmd((90 - lf_dif/2.5),(90 + lf_dif/2.5));
+
+  lf_prverr = lf_err;
+
+  
+ 
+}
+
+void line_flw_circle() {//White line
+
+
+  float kp = 2;
+  float kd = 8;
+  float ki = 1;
+
+  
+  int R1 = map(analogRead(A4), min_A4,max_A4/*45 , 770*/ , 50, 0);
+  int L1 = map(analogRead(A3), min_A3,max_A3/*40 , 660*/ , 50, 0);
+  int R2 = map(analogRead(A5), min_A5,max_A5/*45 , 770*/ , 50, 0);
+  int L2 = map(analogRead(A2), min_A2,max_A2/*40 , 660*/ , 50, 0);
+  int L3 = map(analogRead(A1), min_A1,max_A1/*45 , 700*/ , 50, 0);
+  int R3 = map(analogRead(A6), min_A6,max_A6/*40 , 700*/ , 50, 0);
+  int L4 = map(analogRead(A0), min_A0,max_A0/*45 , 700*/ , 50, 0);
+  int R4 = map(analogRead(A7), min_A7,max_A7/*40 , 700*/ , 50, 0);
+  
+
+  lf_err=0.125*(L1-R1)+0.25*(L2-R2)+0.5*(L3-R3)+1*(L4-R4);
+
+  int lf_dif = lf_err * kp + (lf_err - lf_prverr) * kd + (lf_err + lf_prverr)* ki;
+  Serial.print("ERR ");
+  Serial.print(lf_dif);
+  Serial.print(" ");
+  Serial.print("Kp ");
+  Serial.println(kp);
+
+  Serial3.print("ERR ");
+  Serial3.print(lf_dif);
+  Serial3.print(" ");
+  Serial3.print("Kp ");
+  Serial3.println(kp);
+  
+  mtr_cmd((70 - lf_dif/2.5),(70 + lf_dif/2.5));
 
   lf_prverr = lf_err;
 
