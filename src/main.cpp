@@ -28,6 +28,9 @@ Servo armX;
 #define trigPinFront 4
 #define echoPinFront 5
 
+//Object Detector
+#define objDetectorReset 45
+
 
 // NewPing sonar(trigPinFront, echoPinFront, 100);
 
@@ -93,8 +96,9 @@ int flag = 0;
 
 //Game Parameters
 int gems=0;
-char wall_color = 'N';
+int wall_color = 0;
 float kp = 0.1;
+int colorCircleTurn = 0; // 0>>left, 1>>right
 
 //---------Color Sensor1 U---------
 #define S01 44
@@ -172,8 +176,8 @@ void fwd_enc(int duration);
 void bwd_enc(int duration);
 void fwd_enc_spd(int duration,int spd);
 void dgtl();
-char colorDetect1();
-char colorDetect2();
+int colorDetect1(); // red>>1 , green>>2 , blue>>3
+int colorDetect2();
 void buzz();
 void line_flw_fwd();
 void catch_obj();
@@ -185,6 +189,8 @@ void trnToWhiteLine180();
 void trnToWhiteLinergt();
 void trnToWhiteLinelft();
 void line_flw_circle();
+int trnSlightlylft(int time);
+int trnSlightlyrgt(int time);
 
 
 
@@ -208,6 +214,10 @@ void setup() {
 
   pinMode(17,OUTPUT);//Buzzer
   pinMode(run_sw, INPUT);//Run Switch
+  pinMode(objDetectorReset, OUTPUT);//Object Detector Reset
+
+  digitalWrite(objDetectorReset, LOW);
+
 
   pinMode(LM, OUTPUT);
   pinMode(RM, OUTPUT);
@@ -260,12 +270,11 @@ void setup() {
   // delay(2000);
   // drop_obj();
 
- 
+  
 
 }
 
 void loop() {
-  
 
   if(flag==0){
     dgtl();
@@ -306,16 +315,22 @@ void loop() {
                
       }
       delay(500);
-      wall_color = colorDetect2();//Wall color detection
+      while(true){
+        wall_color = colorDetect2();//Wall color detection
+        if(wall_color==3){
+          buzz();
+          break;
+        }else if(wall_color==2){
+          buzz();
+          delay(100);
+          buzz();
+          break;
+      }
+      }
+      
       delay(500);
 
-      if(wall_color=='B'){
-        buzz();
-      }else{
-        buzz();
-        delay(100);
-        buzz();
-      }
+      
       delay(500);
       bwd_enc(150);
       trnToWhiteLine180();
@@ -340,7 +355,7 @@ void loop() {
       }
       brk();
       delay(500);
-      fwd_enc(200); // current position
+      fwd_enc(300); // current position
       trnToWhiteLinergt(); // right turn
       dgtl();
       flag=2;
@@ -399,16 +414,37 @@ void loop() {
     
       brk();
       delay(500);
-      fwd_enc(460);
+      fwd_enc(480);
       trn_lft();
       delay(200);
-      char color = colorDetect1();// Detect Floor Color
+      int color = colorDetect1();// Detect Floor Color
+
+      // while(true){
+      //   wall_color = colorDetect2();//Wall color detection
+      //   if(wall_color==3){
+      //     buzz();
+      //     break;
+      //   }else if(wall_color==2){
+      //     buzz();
+      //     delay(100);
+      //     buzz();
+      //     break;
+      // }
+      // }
       if(color != wall_color){
+        colorCircleTurn = 1;
         trn_180();
       }
 
       delay(200);
       fwd_enc(300);
+      if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+         bwd_enc(200);
+         if(!trnSlightlyrgt(1000)){
+            trnSlightlylft(2000);
+         }
+         fwd_enc(100);
+      }
       flag = 5;
 
   }else if(flag == 5){//Turn After Color circle
@@ -430,18 +466,19 @@ void loop() {
          fwd_enc(300);
          trnToWhiteLinergt();
         delay(200);
-        line_flw_dur(1000);
+        line_flw_dur(800);
       }else{
         fwd_enc(300);
         trnToWhiteLinelft();
         delay(200);
-        line_flw_dur(1000);
+        line_flw_dur(800);
       }
       
       flag = 6;
 
 
   }else if(flag == 6){//Object detection Circle
+      digitalWrite(objDetectorReset, HIGH);
       while(true){
         if(DR5==a && DR4==a && DL4==a && DL5==a){
           break;
@@ -470,11 +507,123 @@ void loop() {
       trnToWhiteLinelft();
       delay(500);
       
+      
       flag = 7;
+
+  }else if(flag == 7){//Go to tht red circle
+
+    dgtl();
+    while(true){
+      if(DL5==a && DL4==a && DL3==a && DL2==a || DR5==a && DR4==a && DR3==a && DR2==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+        
+        brk();
+        delay(500);
+        fwd_enc(300);
+        if(DL5==a && DL4==a && DL3==a && DL2==a){
+          trnToWhiteLinelft();
+          delay(200);
+          line_flw_dur(500);
+
+        }else if(DR5==a && DR4==a && DR3==a && DR2==a){
+          trnToWhiteLinergt();
+          delay(200);
+          line_flw_dur(500);
+        }
+        while(true)
+        {
+          if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+            break; 
+          }
+          line_flw();
+          dgtl();
+        }
+
+        brk();
+        delay(500);
+        fwd_enc(480);
+        if(colorCircleTurn == 1){
+          trn_rgt();
+          delay(200);
+        }else{
+          trn_lft();
+          delay(200);
+        }  
+        fwd_enc(300);
+        if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+         bwd_enc(200);
+         if(!trnSlightlyrgt(1000)){
+            trnSlightlylft(2000);
+         }
+         fwd_enc(100);
+      }
+
+        flag = 8;
+
+  }else if(flag ==8){ //choose red circle
+    dgtl();
+    while(true){
+      if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+    
+      brk();
+      delay(500);
+      fwd_enc(100);
+      delay(200);
+      dgtl();
+
+      while(true){//Wall detection
+          if(getDistance()<7){  
+              break;
+          }
+          line_flw();
+          dgtl();
+          delay(10);
+      }
+      brk();
+      delay(500);
+      while(true){
+          if(getDistance()<6){//Go to the drag object
+              break;
+          }
+          fwd_enc(50); 
+          delay(100);   
+          buzz();
+          delay(100);
+          buzz();
+          delay (100);
+          buzz();
+               
+      }
+      catch_obj();
+      bwd_enc(200);
+      trnToWhiteLine180();
+      delay(500);
+      while(true){
+        if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+          break; 
+        }
+        line_flw();
+        dgtl();
+      }
+
+
+      
+      flag = 9;
+    
 
   }
 
-      
+
+
 
 
   //line_flw();
@@ -536,7 +685,7 @@ void trnToWhiteLine180(){
 
 
 void trn_180(){
-  int enc_val=540;
+  int enc_val=570;
   mtr_cmd(0, 0);
   delay(1000);
 
@@ -583,7 +732,7 @@ void trn_lft() {
   mtr_cmd(0, 0);
   delay(1000);
 
-  fwd_enc(175);
+  //fwd_enc(175);
 
 
 }
@@ -656,6 +805,46 @@ void trnToWhiteLinergt(){
 
 
 ///////////////////////////iwarai///////////////////////////////////////////
+///////////////////////Slightly Right Turn///////////////////////////////
+int trnSlightlylft(int time){
+
+  stt_time=millis();
+  elp_time=0;
+  dgtl();
+  while(time>elp_time){
+    if((DR1==a && DL1==a)){
+      return 1;
+    }
+    mtr_cmd(-110, 110);
+    delay(100);
+    mtr_cmd(0,0);
+    delay(100);
+    dgtl();
+    elp_time=millis()-stt_time;
+  }
+  return 0;
+}
+
+int trnSlightlyrgt(int time){
+
+  stt_time=millis();
+  elp_time=0;
+  dgtl();
+  while(time>elp_time){
+    if((DR1==a && DL1==a)){
+      return 1;
+    }
+    mtr_cmd(110, -110);
+    delay(100);
+    mtr_cmd(0,0);
+    delay(100);
+    dgtl();
+    elp_time=millis()-stt_time;
+  }
+  return 0;
+  
+}
+
 //////////////////////////////////// Precise left Turn /////////////////////////////////
 void trn_Precice_lft() {
 
@@ -853,7 +1042,7 @@ void line_flw_circle() {//White line
   Serial3.print("Kp ");
   Serial3.println(kp);
   
-  mtr_cmd((70 - lf_dif/2.5),(70 + lf_dif/2.5));
+  mtr_cmd((75 - lf_dif/2.5),(75 + lf_dif/2.5));
 
   lf_prverr = lf_err;
 
@@ -1380,7 +1569,7 @@ void dgtl() {
 
 ////////////////////////////////////////////////////////////////Color Detection /////////////////////////////////////////////////////////////////////////
 
-char colorDetect1() {
+int colorDetect1() {
 
   digitalWrite(S21, LOW);
   digitalWrite(S31, LOW);
@@ -1405,15 +1594,15 @@ char colorDetect1() {
   bluenew1 = (blue1 / total1) * 100;
 
   if (rednew1 < greennew1 && rednew1 < bluenew1) { //RED
-    return 'R';
+    return 1;
   }
   else if (rednew1 > greennew1 && greennew1 < bluenew1) { //GREEN
-    return 'G';
+    return 2;
   }
   else if (bluenew1 < greennew1 && rednew1 > bluenew1) { //BLUE
-    return 'B';
+    return 3;
   }else{
-    return 'N';
+    return 0;
   }
   //    Serial.print(R1);
   //    Serial.print(" ");
@@ -1430,7 +1619,7 @@ char colorDetect1() {
 
 }
 
-char colorDetect2() {
+int colorDetect2() {
 
   digitalWrite(S22, LOW);
   digitalWrite(S32, LOW);
@@ -1440,11 +1629,15 @@ char colorDetect2() {
   digitalWrite(S22, HIGH);
   digitalWrite(S32, HIGH);
   green2 = pulseIn(OUT2, LOW);
+  Serial.println(green2);
+  Serial.print("Green Thres");
+  
   greenColor2 = map(green2, green_min2, green_max2, 255, 0);
 
   digitalWrite(S22, LOW);
   digitalWrite(S32, HIGH);
   blue2 = pulseIn(OUT2, LOW);
+  
   blueColor2 = map(blue2, blue_min2, blue_max2, 255, 0);
 
   total2 = red2 + green2 + blue2;
@@ -1453,18 +1646,19 @@ char colorDetect2() {
   rednew2 = (red2 / total2) * 100;
   greennew2 = (green2 / total2) * 100;
   bluenew2 = (blue2 / total2) * 100;
+  
 
-  if (rednew1 < greennew1 && rednew1 < bluenew1) { //RED
-    return 'R';
+  if (rednew2 < greennew2 && rednew2 < bluenew2) { //RED
+    return 1; //red
   }
-  else if (rednew1 > greennew1 && greennew1 < bluenew1) { //GREEN
-    return 'G';
+  else if (rednew2 > greennew2 && greennew2 < bluenew2) { //GREEN
+    return 2; //green
   }
-  else if (bluenew1 < greennew1 && rednew1 > bluenew1) { //BLUE
-    return 'B';
+  else if (bluenew2 < greennew2 && rednew2 > bluenew2) { //BLUE
+    return 3; //blue
 
   }else{
-    return 'N';
+    return 0; //none
   }
   //    Serial.print(R1);
   //    Serial.print(" ");
