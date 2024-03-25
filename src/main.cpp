@@ -260,9 +260,9 @@ void setup() {
    cal();
    buzz();
 
-  // while (digitalRead(run_sw) != HIGH) {
-  //   delay(500);
-  // }
+  while (digitalRead(run_sw) != HIGH) {
+    delay(500);
+  }
   fwd_enc(400);
   
   //ARM test
@@ -355,7 +355,7 @@ void loop() {
       }
       brk();
       delay(500);
-      fwd_enc(300); // current position
+      fwd_enc(250); // current position
       trnToWhiteLinergt(); // right turn
       dgtl();
       flag=2;
@@ -375,7 +375,7 @@ void loop() {
       }
       brk();
       delay(500);
-      fwd_enc(280);
+      fwd_enc(220);
       trnToWhiteLinergt(); // right turn
       dgtl();
       flag=3;
@@ -396,7 +396,7 @@ void loop() {
     
       brk();
       delay(500);
-      fwd_enc(300);
+      fwd_enc(250);
       trnToWhiteLinelft();
       delay(200);
       line_flw_dur(1000);
@@ -414,7 +414,7 @@ void loop() {
     
       brk();
       delay(500);
-      fwd_enc(480);
+      fwd_enc(400);
       trn_lft();
       delay(200);
       int color = colorDetect1();// Detect Floor Color
@@ -438,10 +438,12 @@ void loop() {
 
       delay(200);
       fwd_enc(300);
-      if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
-         bwd_enc(200);
-         if(!trnSlightlyrgt(1000)){
-            trnSlightlylft(2000);
+      buzz();
+      if((DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a)){
+         bwd_enc(100);
+         buzz();
+         if(!trnSlightlyrgt(2000)){
+            trnSlightlylft(4000);
          }
          fwd_enc(100);
       }
@@ -463,12 +465,12 @@ void loop() {
       brk();
       delay(500);
       if(DR5==a && DR4==a && DR3==a && DR2==a){
-         fwd_enc(300);
+         fwd_enc(220);
          trnToWhiteLinergt();
         delay(200);
         line_flw_dur(800);
       }else{
-        fwd_enc(300);
+        fwd_enc(220);
         trnToWhiteLinelft();
         delay(200);
         line_flw_dur(800);
@@ -489,7 +491,7 @@ void loop() {
 
       brk();
       delay(500);
-      fwd_enc(300);
+      fwd_enc(220);
       trnToWhiteLinelft();
       delay(200);
       
@@ -523,7 +525,7 @@ void loop() {
         
         brk();
         delay(500);
-        fwd_enc(300);
+        fwd_enc(250);
         if(DL5==a && DL4==a && DL3==a && DL2==a){
           trnToWhiteLinelft();
           delay(200);
@@ -545,7 +547,7 @@ void loop() {
 
         brk();
         delay(500);
-        fwd_enc(480);
+        fwd_enc(440);
         if(colorCircleTurn == 1){
           trn_rgt();
           delay(200);
@@ -554,10 +556,10 @@ void loop() {
           delay(200);
         }  
         fwd_enc(300);
-        if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+        if((DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a)){
          bwd_enc(200);
-         if(!trnSlightlyrgt(1000)){
-            trnSlightlylft(2000);
+         if(!trnSlightlyrgt(2000)){
+            trnSlightlylft(4000);
          }
          fwd_enc(100);
       }
@@ -685,7 +687,7 @@ void trnToWhiteLine180(){
 
 
 void trn_180(){
-  int enc_val=570;
+  int enc_val=650;
   mtr_cmd(0, 0);
   delay(1000);
 
@@ -710,7 +712,7 @@ void trn_180(){
 
 
 void trn_lft() {
-  int enc_val=600;
+  int enc_val=560;
   
 
   mtr_cmd(0, 0);
@@ -739,7 +741,7 @@ void trn_lft() {
 
 void trn_rgt() {
 
-  int enc_val = 600;
+  int enc_val = 560;
   
 
   mtr_cmd(0, 0);
@@ -1042,7 +1044,7 @@ void line_flw_circle() {//White line
   Serial3.print("Kp ");
   Serial3.println(kp);
   
-  mtr_cmd((75 - lf_dif/2.5),(75 + lf_dif/2.5));
+  mtr_cmd((70 - lf_dif/2.5),(70 + lf_dif/2.5));
 
   lf_prverr = lf_err;
 
