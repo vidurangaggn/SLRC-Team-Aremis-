@@ -89,10 +89,14 @@ long ev1;
 long ev2;
 long enc_err;
 
-int flag = 0;
+int flag = 8;
 
 //Run Switch
 #define run_sw 23
+
+//Metral Detector
+#define metalDetector A15
+
 
 //Game Parameters
 int gems=0;
@@ -182,15 +186,21 @@ void buzz();
 void line_flw_fwd();
 void catch_obj();
 void drop_obj();
+void arm_up();
+void arm_down();
+void grab_obj();
+void release_obj();
+int isMetal();
 int getDistance();  
-void trnPrecise180();
-void trn_Precice_rgt();
+void trn_Precide_180();
 void trnToWhiteLine180();
 void trnToWhiteLinergt();
 void trnToWhiteLinelft();
 void line_flw_circle();
 int trnSlightlylft(int time);
 int trnSlightlyrgt(int time);
+int captureCube();
+void bwd_line_flw();
 
 
 
@@ -203,6 +213,8 @@ void setup() {
   //   pinMode(pin, INPUT);
   // }
  
+ //Metal detector
+ pinMode(metalDetector, INPUT);
   
   //Servo (Arms)
   pinMode(armY_Pin, OUTPUT);
@@ -210,6 +222,9 @@ void setup() {
 
   armY.attach(armY_Pin);
   armX.attach(armX_Pin);
+
+  armX.write(180);
+  armY.write(40);
 
 
   pinMode(17,OUTPUT);//Buzzer
@@ -260,10 +275,10 @@ void setup() {
    cal();
    buzz();
 
-  while (digitalRead(run_sw) != HIGH) {
-    delay(500);
-  }
-  fwd_enc(400);
+  // while (digitalRead(run_sw) != HIGH) {
+  //   delay(500);
+  // }
+  //fwd_enc(400);
   
   //ARM test
   // catch_obj();
@@ -556,7 +571,7 @@ void loop() {
           delay(200);
         }  
         fwd_enc(300);
-        if((DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a)){
+        if(!(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a)){
          bwd_enc(200);
          if(!trnSlightlyrgt(2000)){
             trnSlightlylft(4000);
@@ -578,50 +593,124 @@ void loop() {
     
       brk();
       delay(500);
-      fwd_enc(100);
-      delay(200);
-      dgtl();
+      fwd_enc(350);
+      delay(500);
+      
+      int metal = captureCube();
+      if(!metal){
+        brk();
+        delay(500);
+        fwd_enc(350);
+        delay(500);
+        trnToWhiteLinergt();
+        metal = captureCube();
+          if(!metal){
+            brk();
+            delay(500);
+            fwd_enc(350);
+            delay(500);
+            trnToWhiteLine180();
+          
+            metal = captureCube();
+          }else{
+            brk();
+            delay(500);
+            fwd_enc(350);
+            delay(200);
+            trnToWhiteLinergt();
+            
 
-      while(true){//Wall detection
-          if(getDistance()<7){  
-              break;
           }
-          line_flw();
-          dgtl();
-          delay(10);
+      }else{
+        brk();
+        delay(500);
+        fwd_enc(350);
+        delay(500);
+        trnToWhiteLine180();
+        
       }
+
       brk();
       delay(500);
-      while(true){
-          if(getDistance()<6){//Go to the drag object
-              break;
-          }
-          fwd_enc(50); 
-          delay(100);   
-          buzz();
-          delay(100);
-          buzz();
-          delay (100);
-          buzz();
-               
-      }
-      catch_obj();
-      bwd_enc(200);
-      trnToWhiteLine180();
-      delay(500);
-      while(true){
-        if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
-          break; 
-        }
-        line_flw();
-        dgtl();
-      }
-
+      line_flw_dur(500);
+      delay(200);
+      
+      
 
       
       flag = 9;
     
 
+  }else if(flag == 9){//bring cube to the hole
+    dgtl();
+    while(true){
+      if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+    brk();
+    delay(500);
+    fwd_enc(250);
+    delay(500);
+    dgtl();
+    while(true){
+      if(DL5==a && DL4==a && DL3==a && DL2==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+    brk();
+    delay(500);
+    fwd_enc(350);
+    trnToWhiteLinelft();
+    while (true){//drop and push obj to the cave
+      if(getDistance()<10){
+          break; 
+      }
+      line_flw();
+      
+      delay(10);
+      
+    }
+    brk();
+    bwd_enc(350);
+    delay(500);
+    arm_down();
+    delay(500);
+    release_obj();
+    delay(500);
+    bwd_enc(200);
+    grab_obj();
+    delay(500);
+    fwd_enc(300);
+    delay(500);
+    bwd_enc(250);
+    trnToWhiteLine180();
+    dgtl();
+    while (true)
+    {
+      if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+  }
+
+
+  else if(flag==-1){
+
+    while (true)
+    {
+      Serial.println(getDistance());
+    }
+    
+    
+    
+    //flag =-2;
   }
 
 
@@ -630,6 +719,88 @@ void loop() {
 
   //line_flw();
   }
+
+////////////////////////////////////////Cube Detection /////////////////////////////////////////////
+int captureCube(){
+  dgtl();
+  int distanceIn = 0;
+  int isThereCube = 1 ;
+  dgtl();
+  while(true){//Cube detection
+          if((DL4==a && DL3==a && DL2==a && DL1==a && DR1 == a && DR4==a && DR3==a && DR2==a ) ){  //getDistance()<2 ||
+              isThereCube = 0;
+              break;
+          }else if(getDistance()<9){
+              distanceIn = 1;
+              break;
+          }
+          line_flw();
+          dgtl();
+          delay(10);
+        
+        }
+      brk();
+      delay(500);
+      int metal = 0;
+      if(isThereCube == 1){
+        if(distanceIn == 1){
+        bwd_enc(310);
+        }
+        delay(500);
+        arm_down();
+        delay(500);
+        metal = isMetal();
+      
+      }
+
+      
+      
+      delay(1000);
+
+      if(metal){
+        grab_obj();
+        delay(500);
+        arm_up();
+      }else{
+        if(isThereCube ==1){
+          arm_up();
+        }
+        
+      }
+      dgtl();
+      while(true){
+      if(DL4==a && DL3==a && DL2==a && DL1==a && DR1==a && DR4==a && DR3==a && DR2==a ){
+          break; 
+      } 
+      line_flw_bwd();
+      dgtl();
+      
+    }
+
+    return metal;
+
+}
+
+
+////////////////////////////////////////Metal Detect///////////////////////////////////////////////////////////
+
+int isMetal(){
+  int count = 0;
+  int loop = 50;
+  for(int i = 0 ; i<loop ;i++){
+    if(analogRead(metalDetector)>800){
+      count++;
+    }
+    delay(10);
+    
+  }
+  if(count>loop/2){
+      return 1;
+    }
+  return 0;
+
+
+}
 
 //////////////////////////////////////////////////Distance//////////////////////////////////////////////////////
 int getDistance() {
@@ -650,9 +821,9 @@ int getDistance() {
 
 
 /////////////////////////////////////////////////////////////////////////////Turn///////////////////////////////////////////////////////////////////////////
-void trn_Precide_180(){
+void trn_Precise_180(){
 
-  int enc_val=400;
+  int enc_val=700;
   mtr_cmd(0, 0);
   delay(1000);
 
@@ -671,7 +842,7 @@ void trn_Precide_180(){
 }
 void trnToWhiteLine180(){
 
-  trn_Precide_180();
+  trn_Precise_180();
   dgtl();
   while(!(DR1==a && DL1==a)){
     mtr_cmd(110, -110);
@@ -769,7 +940,7 @@ void trn_rgt() {
 ///////////////////////////Precise Right Turn///////////////////////////////
 void trn_Precice_rgt() {
 
-  int enc_val = 200;
+  int enc_val = 400;
   
   
 
@@ -850,7 +1021,7 @@ int trnSlightlyrgt(int time){
 //////////////////////////////////// Precise left Turn /////////////////////////////////
 void trn_Precice_lft() {
 
-  int enc_val = 200;
+  int enc_val = 400;
   
   mtr_cmd(0, 0);
   delay(1000);
@@ -937,13 +1108,14 @@ void trn_180_at_maze(){
 
 void catch_obj() {
   
-  armX.write(0);
+  armX.write(180);
   delay(500);
-  armY.write(40);
+  armY.write(112);  
   delay(1000);
-  armX.write(95);
+  armX.write(70);
   delay(500);
-  armY.write(120);
+  armY.write(50);
+  delay(1000);
 
   // int arm_pos = 0;
   // while (arm_pos < 180) {
@@ -954,12 +1126,11 @@ void catch_obj() {
 }
 
 void drop_obj() {
-  
-  armY.write(60);
+
+  armY.write(112);
   delay(500);
-  armX.write(0);
+  armX.write(180);
   delay(1000);
-  armY.write(120);
 
   // int arm_pos = 0;
   // while (arm_pos < 180) {
@@ -967,6 +1138,33 @@ void drop_obj() {
   //   armX.write(arm_pos);
   //   delay(10);
   // }
+}
+
+void arm_down(){
+  for(int i=50 ; i<=115 ; i++){
+    armY.write(i);
+    delay(10);
+  }
+ 
+}
+
+void grab_obj(){
+  armX.write(57);
+  delay(300);
+
+}
+
+void arm_up(){
+  for(int i=115;i>=50;i--){
+    armY.write(i);
+    delay(10);
+  }
+}
+
+void release_obj(){
+  armX.write(180);
+  delay(300);
+
 }
 
 //////////////////////////////////////////////////////////////////////LINE FOLLOWER///////////////////////////////////////////////////////////////////////
@@ -1004,6 +1202,47 @@ void line_flw() {//White line
   Serial3.println(kp);
   
   mtr_cmd((90 - lf_dif/2.5),(90 + lf_dif/2.5));
+
+  lf_prverr = lf_err;
+
+  
+ 
+}
+
+void bwd_line_flw() {//White line
+
+
+  float kp = 2;
+  float kd = 8;
+  float ki = 1;
+
+  
+  int R1 = map(analogRead(A4), min_A4,max_A4/*45 , 770*/ , 50, 0);
+  int L1 = map(analogRead(A3), min_A3,max_A3/*40 , 660*/ , 50, 0);
+  int R2 = map(analogRead(A5), min_A5,max_A5/*45 , 770*/ , 50, 0);
+  int L2 = map(analogRead(A2), min_A2,max_A2/*40 , 660*/ , 50, 0);
+  int L3 = map(analogRead(A1), min_A1,max_A1/*45 , 700*/ , 50, 0);
+  int R3 = map(analogRead(A6), min_A6,max_A6/*40 , 700*/ , 50, 0);
+  int L4 = map(analogRead(A0), min_A0,max_A0/*45 , 700*/ , 50, 0);
+  int R4 = map(analogRead(A7), min_A7,max_A7/*40 , 700*/ , 50, 0);
+  
+
+  lf_err=0.125*(L1-R1)+0.25*(L2-R2)+0.5*(L3-R3)+1*(L4-R4);
+
+  int lf_dif = lf_err * kp + (lf_err - lf_prverr) * kd + (lf_err + lf_prverr)* ki;
+  Serial.print("ERR ");
+  Serial.print(lf_dif);
+  Serial.print(" ");
+  Serial.print("Kp ");
+  Serial.println(kp);
+
+  Serial3.print("ERR ");
+  Serial3.print(lf_dif);
+  Serial3.print(" ");
+  Serial3.print("Kp ");
+  Serial3.println(kp);
+  
+  mtr_cmd(-1*(80 - lf_dif/2.5),-1*(80 + lf_dif/2.5));
 
   lf_prverr = lf_err;
 
@@ -1061,8 +1300,6 @@ void line_flw_dur(int time_){
   }
 }
 
-
-
 void buzz(){
 
  digitalWrite(17, HIGH);
@@ -1070,7 +1307,6 @@ void buzz(){
  digitalWrite(17, LOW);
 
 }
-
 
 void invt_line_flw() {//Black Line
 
@@ -1099,8 +1335,6 @@ void invt_line_flw() {//Black Line
 
 }
 
-
-
 void line_flw_bwd() {
   float kp = 0.1;
   float kd = 0.0001;
@@ -1118,7 +1352,7 @@ void line_flw_bwd() {
 
   int lf_dif = lf_bwd_err * kp + (lf_bwd_err - lf_bwd_prverr) * kd;
 
-  mtr_cmd(-1*(100 - lf_dif), -1*(100 + lf_dif));
+  mtr_cmd(-1*(85 + lf_dif), -1*(85 - lf_dif));
 
   lf_bwd_prverr = lf_bwd_err;
 
@@ -1404,7 +1638,7 @@ void fwd_enc(int duration){
   while (elp_time<=duration) {
     enc_err=(-1)*LnewPosition+RnewPosition;
 
-    mtr_cmd(120+enc_err,120-enc_err);
+    mtr_cmd(120+enc_err,116-enc_err);
     
     LnewPosition = LEnc.read() - ev1;
     RnewPosition = REnc.read() - ev2;
@@ -1426,12 +1660,14 @@ void bwd_enc(int duration){
   while (elp_time<=duration) {
     enc_err=(-1)*LnewPosition+RnewPosition;
 
-    mtr_cmd(-1*(120-enc_err),-1*(120+enc_err));
+    mtr_cmd(-1*(116-enc_err),-1*(118+enc_err));
     
     LnewPosition = LEnc.read() - ev1;
     RnewPosition = REnc.read() - ev2;
     elp_time=millis()-stt_time;
   }
+
+  mtr_cmd(0, 0);
 }
 
 
