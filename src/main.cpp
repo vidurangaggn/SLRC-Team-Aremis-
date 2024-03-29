@@ -20,9 +20,11 @@ Encoder REnc(2, 3);
 //Arm 
 #define armY_Pin 10
 #define armX_Pin 11
+#define camPin 12
 
 Servo armY;
 Servo armX;
+Servo cam;
 
 //Front Ultra Sonic Sensor
 #define trigPinFront 4
@@ -90,7 +92,7 @@ long ev1;
 long ev2;
 long enc_err;
 
-int flag = 9;
+int flag = 0;
 
 //Run Switch
 #define run_sw 23
@@ -228,10 +230,12 @@ void setup() {
 
   armY.attach(armY_Pin);
   armX.attach(armX_Pin);
+  cam.attach(camPin);
+
 
   armX.write(180);
   armY.write(20);
-
+  cam.write(45);
 
   pinMode(17,OUTPUT);//Buzzer
   pinMode(run_sw, INPUT);//Run Switch
@@ -690,7 +694,7 @@ void loop() {
     }
     brk();
     delay(500);
-    fwd_enc_spd(11,90);
+    fwd_enc_spd(10,90);
     if(!(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a)){
          bwd_enc(100);
          buzz();
@@ -739,6 +743,11 @@ void loop() {
     brk();
     delay(500);
     bwd_enc(250);
+    delay(200);
+    arm_up();
+    delay(200);
+    line_flw_dur(200);
+    delay(500);
     trnToWhiteLine180();
  
     dgtl();
@@ -763,7 +772,7 @@ void loop() {
   }else if(flag == 10){//go to the second cube selection area
     dgtl();
     while(true){
-      if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+      if(  DL4==a && DL3==a && DL2==a && DR4==a && DR3==a && DR2==a){
           break; 
       }
       line_flw();
@@ -772,8 +781,7 @@ void loop() {
     
       brk();
       delay(500);
-      fwd_enc(500);
-      trnToWhiteLinelft();
+      fwd_enc(450);
       delay(200);
       line_flw_dur(100);
       
@@ -788,26 +796,10 @@ void loop() {
       }
       brk();
       delay(500);
-      fwd_enc_spd(12,90);
-      
-      dgtl();
-      while (true)
-      {
-        if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
-            break; 
-        }
-        line_flw();
-        dgtl();
-      }
-      brk();
-      delay(500);
       fwd_enc(350);
       trnToWhiteLinergt();
       delay(200);
 
-      
-
-      
       flag = 11;
 
 
@@ -917,7 +909,13 @@ void loop() {
     brk();
     delay(500);
     bwd_enc(250);
+    delay(200);
+    arm_up();
+    delay(200);
+    line_flw_dur(200);
+    delay(500);
     trnToWhiteLine180();
+
  
     dgtl();
     while (true)
@@ -1031,6 +1029,16 @@ int captureCube(){
     return metal;
 
 }
+
+/////////////////////////////////////////Camera Functionalities /////////////////////////////////////////
+void trnCamera(){
+  for(int i = 45; i<135; i++){
+    cam.write(i);
+    delay(100);
+  }
+
+}
+
 
 
 ////////////////////////////////////////Metal Detect///////////////////////////////////////////////////////////
@@ -1351,7 +1359,7 @@ void drop_obj() {
 }
 
 void arm_down(){
-  for(int i=50 ; i<=128 ; i++){
+  for(int i=50 ; i<=138 ; i++){
     armY.write(i);
     delay(10);
   }
@@ -1369,7 +1377,7 @@ void close_arm(){
 }
 
 void arm_up(){
-  for(int i=128;i>=50;i--){
+  for(int i=138;i>=50;i--){
     armY.write(i);
     delay(10);
   }
