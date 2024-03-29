@@ -29,7 +29,8 @@ Servo armX;
 #define echoPinFront 5
 
 //Object Detector
-#define objDetectorReset 45
+#define objDetectorReset 7
+#define objType 6 //0>>Cylinder 1>> cuboid
 
 
 // NewPing sonar(trigPinFront, echoPinFront, 100);
@@ -89,7 +90,7 @@ long ev1;
 long ev2;
 long enc_err;
 
-int flag = 8;
+int flag = 9;
 
 //Run Switch
 #define run_sw 23
@@ -178,7 +179,11 @@ void trn_rgt();
 void trn_180_at_c();
 void fwd_enc(int duration);
 void bwd_enc(int duration);
-void fwd_enc_spd(int duration,int spd);
+void fwd_enc_spd(float target_distance,int spd);
+void bwd_enc_spd(float target_distance,int spd);
+void bwd_enc_givenSpd(int target_distance,int spd);  
+void fwd_enc_givenSpd(int target_distance,int spd);
+
 void dgtl();
 int colorDetect1(); // red>>1 , green>>2 , blue>>3
 int colorDetect2();
@@ -201,7 +206,8 @@ int trnSlightlylft(int time);
 int trnSlightlyrgt(int time);
 int captureCube();
 void bwd_line_flw();
-
+void line_flw_given_spd(int speed);
+void close_arm();
 
 
 void setup() {
@@ -224,14 +230,16 @@ void setup() {
   armX.attach(armX_Pin);
 
   armX.write(180);
-  armY.write(60);
+  armY.write(20);
 
 
   pinMode(17,OUTPUT);//Buzzer
   pinMode(run_sw, INPUT);//Run Switch
   pinMode(objDetectorReset, OUTPUT);//Object Detector Reset
+  pinMode(objType, INPUT);//Object Type
 
   digitalWrite(objDetectorReset, LOW);
+
 
 
   pinMode(LM, OUTPUT);
@@ -278,7 +286,8 @@ void setup() {
   // while (digitalRead(run_sw) != HIGH) {
   //   delay(500);
   // }
-  //fwd_enc(400);
+  fwd_enc(400);
+  //fwd_enc_spd(6,80);
   
   //ARM test
   // catch_obj();
@@ -347,7 +356,7 @@ void loop() {
 
       
       delay(500);
-      bwd_enc(150);
+      bwd_enc(250);
       trnToWhiteLine180();
       //trnPrecise180();  //Trn 180 at wall detection area
       delay(500);
@@ -370,7 +379,7 @@ void loop() {
       }
       brk();
       delay(500);
-      fwd_enc(250); // current position
+      fwd_enc(350); // current position
       trnToWhiteLinergt(); // right turn
       dgtl();
       flag=2;
@@ -390,7 +399,7 @@ void loop() {
       }
       brk();
       delay(500);
-      fwd_enc(220);
+      fwd_enc(320);
       trnToWhiteLinergt(); // right turn
       dgtl();
       flag=3;
@@ -429,10 +438,25 @@ void loop() {
     
       brk();
       delay(500);
-      fwd_enc(400);
-      trn_lft();
+      fwd_enc_spd(12,100);
+
+      //fwd_enc(500);
+      trnToWhiteLinelft();
+
       delay(200);
-      int color = colorDetect1();// Detect Floor Color
+      
+      int color = 0;
+      while(true){
+        if(colorDetect1() != 0){
+          color = colorDetect1();
+          break;
+        }
+        
+        bwd_enc(50);
+        delay(50);
+
+      }
+      // Detect Floor Color
 
       // while(true){
       //   wall_color = colorDetect2();//Wall color detection
@@ -448,13 +472,13 @@ void loop() {
       // }
       if(color != wall_color){
         colorCircleTurn = 1;
-        trn_180();
+        trnToWhiteLine180();
       }
 
       delay(200);
-      fwd_enc(300);
+      fwd_enc(200);
       buzz();
-      if((DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a)){
+      if(!(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a)){
          bwd_enc(100);
          buzz();
          if(!trnSlightlyrgt(2000)){
@@ -480,12 +504,12 @@ void loop() {
       brk();
       delay(500);
       if(DR5==a && DR4==a && DR3==a && DR2==a){
-         fwd_enc(220);
+         fwd_enc(320);
          trnToWhiteLinergt();
         delay(200);
         line_flw_dur(800);
       }else{
-        fwd_enc(220);
+        fwd_enc(320);
         trnToWhiteLinelft();
         delay(200);
         line_flw_dur(800);
@@ -506,13 +530,13 @@ void loop() {
 
       brk();
       delay(500);
-      fwd_enc(220);
+      fwd_enc(350);
       trnToWhiteLinelft();
       delay(200);
       
 
       while(true){
-        if(DL5==a && DL4==a){
+        if(DL5==a && DL4==a && DL3==a && DL2==a){
           break;
         }
         line_flw();
@@ -520,9 +544,14 @@ void loop() {
       }
       brk();
       delay(500);
-      fwd_enc(200);
+      fwd_enc(350);
       trnToWhiteLinelft();
-      delay(500);
+      delay(1000);
+      if(!digitalRead(objType)){
+        gems = gems + 10;//Cylinder
+      }else{
+        gems = gems +20; //cuboid
+      }
       
       
       flag = 7;
@@ -531,7 +560,7 @@ void loop() {
 
     dgtl();
     while(true){
-      if(DL5==a && DL4==a && DL3==a && DL2==a || DR5==a && DR4==a && DR3==a && DR2==a){
+      if((DL5==a && DL4==a && DL3==a && DL2==a) || (DR5==a && DR4==a && DR3==a && DR2==a)){
           break; 
       }
       line_flw();
@@ -540,7 +569,7 @@ void loop() {
         
         brk();
         delay(500);
-        fwd_enc(250);
+        fwd_enc(350);
         if(DL5==a && DL4==a && DL3==a && DL2==a){
           trnToWhiteLinelft();
           delay(200);
@@ -562,12 +591,12 @@ void loop() {
 
         brk();
         delay(500);
-        fwd_enc(440);
+        fwd_enc_spd(12,100);
         if(colorCircleTurn == 1){
-          trn_rgt();
+          trnToWhiteLinergt();
           delay(200);
         }else{
-          trn_lft();
+          trnToWhiteLinelft();
           delay(200);
         }  
         fwd_enc(300);
@@ -593,28 +622,29 @@ void loop() {
     
       brk();
       delay(500);
-      fwd_enc(350);
+      fwd_enc(250);
       delay(500);
       
       int metal = captureCube();
       if(!metal){//go forward if not go right
         brk();
         delay(500);
-        fwd_enc(350);
+        fwd_enc(400);
         delay(500);
         trnToWhiteLinergt();
         metal = captureCube();
           if(!metal){//go right if not go left
             brk();
             delay(500);
-            fwd_enc(350);
+            fwd_enc(500);
             delay(500);
             trnToWhiteLine180();
+            
             metal = captureCube();
            
             brk(); //if there is a metal in left direct to normaal path
             delay(500);
-            fwd_enc(350);
+            fwd_enc(400);
             delay(200);
             trnToWhiteLinelft();
             
@@ -622,7 +652,7 @@ void loop() {
           }else{
             brk();
             delay(500);
-            fwd_enc(350);
+            fwd_enc(400);
             delay(200);
             trnToWhiteLinergt();
             
@@ -631,7 +661,7 @@ void loop() {
       }else{
         brk();
         delay(500);
-        fwd_enc(350);
+        fwd_enc(400);
         delay(500);
         trnToWhiteLine180();
         
@@ -649,6 +679,7 @@ void loop() {
     
 
   }else if(flag == 9){//bring cube to the hole
+    grab_obj();
     dgtl();
     while(true){
       if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
@@ -659,11 +690,198 @@ void loop() {
     }
     brk();
     delay(500);
-    fwd_enc(420);
+    fwd_enc_spd(11,90);
+    if(!(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a)){
+         bwd_enc(100);
+         buzz();
+         if(!trnSlightlyrgt(2000)){
+            trnSlightlylft(4000);
+         }
+         fwd_enc(100);
+      }
     delay(500);
     dgtl();
     while(true){
-      if(DL5==a && DL4==a && DL3==a && DL2==a){
+      if(DL5==a && DL4==a && DL3==a && DL2==a && DL1 ==a && DR1==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+    brk();
+    delay(500);
+    fwd_enc(400);
+    trnToWhiteLinelft();
+
+    
+    while (true){//drop and push obj to the cave
+      if(getDistance()<15){
+          break; 
+      }
+      line_flw();
+      delay(10);
+      
+    }
+    brk();
+    delay(500);
+    bwd_enc_spd(13,90);
+    brk();
+    delay(500);
+    arm_down();
+    delay(500);
+    release_obj();
+    delay(500);
+    bwd_enc_spd(6,90);
+    brk();
+    close_arm();
+    delay(500);
+    fwd_enc_spd(13,90);
+    brk();
+    delay(500);
+    bwd_enc(250);
+    trnToWhiteLine180();
+ 
+    dgtl();
+    while (true)
+    {
+      if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+      
+    }
+    brk();
+    delay(500);
+    fwd_enc(350);
+    delay(200);
+    trnToWhiteLinelft();
+
+    flag = 10;
+
+
+  }else if(flag == 10){//go to the second cube selection area
+    dgtl();
+    while(true){
+      if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+    
+      brk();
+      delay(500);
+      fwd_enc(500);
+      trnToWhiteLinelft();
+      delay(200);
+      line_flw_dur(100);
+      
+      dgtl();
+      while (true)
+      {
+        if( DL4==a && DL3==a && DL2==a && DL1==a && DR1==a && DR5==a && DR4==a && DR3==a && DR2==a){
+            break; 
+        }
+        line_flw();
+        dgtl();
+      }
+      brk();
+      delay(500);
+      fwd_enc_spd(12,90);
+      
+      dgtl();
+      while (true)
+      {
+        if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+            break; 
+        }
+        line_flw();
+        dgtl();
+      }
+      brk();
+      delay(500);
+      fwd_enc(350);
+      trnToWhiteLinergt();
+      delay(200);
+
+      
+
+      
+      flag = 11;
+
+
+  }else if(flag == 11){ // Second cube selection area functions
+      dgtl();
+    while(true){
+      if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+    
+      brk();
+      delay(500);
+      fwd_enc(250);
+      delay(500);
+      
+      int metal = captureCube();
+      if(!metal){//go forward if not go right
+        brk();
+        delay(500);
+        fwd_enc(400);
+        delay(500);
+        trnToWhiteLinergt();
+        metal = captureCube();
+          if(!metal){//go right if not go left
+            brk();
+            delay(500);
+            fwd_enc(500);
+            delay(500);
+            trnToWhiteLine180();
+            
+            metal = captureCube();
+           
+            brk(); //if there is a metal in left direct to normaal path
+            delay(500);
+            fwd_enc(400);
+            delay(200);
+            trnToWhiteLinelft();
+            
+
+          }else{
+            brk();
+            delay(500);
+            fwd_enc(400);
+            delay(200);
+            trnToWhiteLinergt();
+            
+
+          }
+      }else{
+        brk();
+        delay(500);
+        fwd_enc(400);
+        delay(500);
+        trnToWhiteLine180();
+        
+      }
+
+      brk();
+      delay(500);
+      line_flw_dur(500);
+      delay(200);
+      
+      
+
+      
+      flag = 12;
+
+  }else if(flag == 12){//carry cube to the hole
+    dgtl();
+    while(true){
+      if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
           break; 
       }
       line_flw();
@@ -672,30 +890,35 @@ void loop() {
     brk();
     delay(500);
     fwd_enc(350);
-    trnToWhiteLinelft();
+    brk();
+
     while (true){//drop and push obj to the cave
-      if(getDistance()<10){
+      if(getDistance()<15){
           break; 
       }
       line_flw();
-      
       delay(10);
       
     }
     brk();
-    bwd_enc(350);
+    delay(500);
+    bwd_enc_spd(13,90);
+    brk();
     delay(500);
     arm_down();
     delay(500);
     release_obj();
     delay(500);
-    bwd_enc(200);
-    grab_obj();
+    bwd_enc_spd(6,90);
+    brk();
+    close_arm();
     delay(500);
-    fwd_enc(300);
+    fwd_enc_spd(13,90);
+    brk();
     delay(500);
     bwd_enc(250);
     trnToWhiteLine180();
+ 
     dgtl();
     while (true)
     {
@@ -704,7 +927,17 @@ void loop() {
       }
       line_flw();
       dgtl();
+      
     }
+    brk();
+    delay(500);
+    fwd_enc(350);
+    delay(200);
+    trnToWhiteLinelft();
+
+    flag = 13;
+
+
   }
 
 
@@ -712,7 +945,9 @@ void loop() {
 
     while (true)
     {
-      Serial.println(getDistance());
+      
+      bwd_enc_spd(6,80);
+     
     }
     
     
@@ -737,33 +972,33 @@ int captureCube(){
           if((DL4==a && DL3==a && DL2==a && DL1==a && DR1 == a && DR4==a && DR3==a && DR2==a ) ){  //getDistance()<2 ||
               isThereCube = 0;
               break;
-          }else if(getDistance()<11){
+          }else if(getDistance()<4){
               distanceIn = 1;
               break;
           }
-          line_flw();
+          line_flw_given_spd(80);
           dgtl();
           delay(10);
         
         }
       brk();
       delay(500);
+      bwd_enc(450);
       int metal = 0;
-      if(isThereCube == 1){
-        if(distanceIn != 1){
-        bwd_enc(310); 
-      }
+      if(isThereCube == 1){//if there is a cube run this
+      //   if(distanceIn != 1){//if there is a cube in front of the robot
+      //   bwd_enc(310); 
+      // }
         
-        delay(500);
-        //bwd_enc(120);
         delay(500);
         arm_down();
         delay(500);
-        fwd_enc(180);
+        fwd_enc(250);
         metal = isMetal();
-      
+        delay(500);
+
       }else{
-        bwd_enc(250);// if there is no cube backward robot
+        bwd_enc(300);// if there is no cube backward robot
       }
       
 
@@ -773,8 +1008,12 @@ int captureCube(){
         grab_obj();
         delay(500);
         arm_up();
+        delay(500);
+        bwd_enc(200);
       }else{
         if(isThereCube ==1){
+          bwd_enc(200);
+          delay(500);
           arm_up();
         }
         
@@ -846,7 +1085,7 @@ void trn_Precise_180(){
   dgtl();
   while (RnewPosition > -enc_val && LnewPosition < enc_val) {
 
-    mtr_cmd(110, -110);
+    mtr_cmd(100, -100);
     LnewPosition = LEnc.read() - ev1;
     RnewPosition = REnc.read() - ev2;
   
@@ -857,7 +1096,7 @@ void trnToWhiteLine180(){
   trn_Precise_180();
   dgtl();
   while(!(DR1==a && DL1==a && DL2==a)){
-    mtr_cmd(110, -110);
+    mtr_cmd(100, -100);
     delay(100);
     mtr_cmd(0,0);
     delay(100);
@@ -870,7 +1109,7 @@ void trnToWhiteLine180(){
 
 
 void trn_180(){
-  int enc_val=650;
+  int enc_val=550;
   mtr_cmd(0, 0);
   delay(1000);
 
@@ -881,7 +1120,7 @@ void trn_180(){
   dgtl();
   while (RnewPosition > -enc_val*2 && LnewPosition < enc_val*2 ) {
 
-    mtr_cmd(110, -110);
+    mtr_cmd(100, -100);
     LnewPosition = LEnc.read() - ev1;
     RnewPosition = REnc.read() - ev2;
   }
@@ -909,7 +1148,7 @@ void trn_lft() {
 
   while (LnewPosition > -enc_val && RnewPosition < enc_val) {
 
-    mtr_cmd(-110, 110);
+    mtr_cmd(-100, 100);
     LnewPosition = LEnc.read() - ev1;
     RnewPosition = REnc.read() - ev2;
   }
@@ -937,7 +1176,7 @@ void trn_rgt() {
 
   while (RnewPosition > -enc_val && LnewPosition < enc_val) {
 
-    mtr_cmd(110, -110);
+    mtr_cmd(100, -100);
     LnewPosition = LEnc.read() - ev1;
     RnewPosition = REnc.read() - ev2;
   }
@@ -952,7 +1191,7 @@ void trn_rgt() {
 ///////////////////////////Precise Right Turn///////////////////////////////
 void trn_Precice_rgt() {
 
-  int enc_val = 400;
+  int enc_val = 350;
   
   
 
@@ -966,7 +1205,7 @@ void trn_Precice_rgt() {
 
   while (RnewPosition > -enc_val && LnewPosition < enc_val) {
 
-    mtr_cmd(110, -110);
+    mtr_cmd(100, -100);
     LnewPosition = LEnc.read() - ev1;
     RnewPosition = REnc.read() - ev2;
   }
@@ -979,7 +1218,7 @@ void trnToWhiteLinergt(){
   trn_Precice_rgt();
   dgtl();
   while(!(DR1==a && DL1==a && DL2==a)){
-    mtr_cmd(110, -110);
+    mtr_cmd(100, -100);
     delay(100);
     mtr_cmd(0,0);
     delay(100);
@@ -1000,7 +1239,7 @@ int trnSlightlylft(int time){
     if((DR1==a && DL1==a && DR2==a)){
       return 1;
     }
-    mtr_cmd(-110, 110);
+    mtr_cmd(-100, 100);
     delay(100);
     mtr_cmd(0,0);
     delay(100);
@@ -1019,7 +1258,7 @@ int trnSlightlyrgt(int time){
     if((DR1==a && DL1==a && DL2==a)){
       return 1;
     }
-    mtr_cmd(110, -110);
+    mtr_cmd(100, -100);
     delay(100);
     mtr_cmd(0,0);
     delay(100);
@@ -1033,7 +1272,7 @@ int trnSlightlyrgt(int time){
 //////////////////////////////////// Precise left Turn /////////////////////////////////
 void trn_Precice_lft() {
 
-  int enc_val = 400;
+  int enc_val = 350;
   
   mtr_cmd(0, 0);
   delay(1000);
@@ -1046,7 +1285,7 @@ void trn_Precice_lft() {
 
   while (LnewPosition > -enc_val && RnewPosition < enc_val) {
 
-    mtr_cmd(-110, 110);
+    mtr_cmd(-100, 100);
     LnewPosition = LEnc.read() - ev1;
     RnewPosition = REnc.read() - ev2;
   }
@@ -1060,7 +1299,7 @@ void trnToWhiteLinelft(){
   trn_Precice_lft();
   dgtl();
   while(!(DR1==a && DL1==a && DR2==a)){
-    mtr_cmd(-110, 110);
+    mtr_cmd(-100, 100);
     delay(100);
     mtr_cmd(0,0);
     delay(100);
@@ -1112,7 +1351,7 @@ void drop_obj() {
 }
 
 void arm_down(){
-  for(int i=60 ; i<=135 ; i++){
+  for(int i=50 ; i<=128 ; i++){
     armY.write(i);
     delay(10);
   }
@@ -1124,9 +1363,13 @@ void grab_obj(){
   delay(300);
 
 }
+void close_arm(){
+  armX.write(0);
+  delay(300);
+}
 
 void arm_up(){
-  for(int i=135;i>=60;i--){
+  for(int i=128;i>=50;i--){
     armY.write(i);
     delay(10);
   }
@@ -1160,17 +1403,6 @@ void line_flw() {//White line
   lf_err=0.125*(L1-R1)+0.25*(L2-R2)+0.5*(L3-R3)+1*(L4-R4);
 
   int lf_dif = lf_err * kp + (lf_err - lf_prverr) * kd + (lf_err + lf_prverr)* ki;
-  Serial.print("ERR ");
-  Serial.print(lf_dif);
-  Serial.print(" ");
-  Serial.print("Kp ");
-  Serial.println(kp);
-
-  Serial3.print("ERR ");
-  Serial3.print(lf_dif);
-  Serial3.print(" ");
-  Serial3.print("Kp ");
-  Serial3.println(kp);
   
   mtr_cmd((90 - lf_dif/2.5),(90 + lf_dif/2.5));
 
@@ -1179,6 +1411,36 @@ void line_flw() {//White line
   
  
 }
+void line_flw_given_spd(int speed) {//White line
+
+
+  float kp = 2;
+  float kd = 8;
+  float ki = 1;
+
+  
+  int R1 = map(analogRead(A4), min_A4,max_A4/*45 , 770*/ , 50, 0);
+  int L1 = map(analogRead(A3), min_A3,max_A3/*40 , 660*/ , 50, 0);
+  int R2 = map(analogRead(A5), min_A5,max_A5/*45 , 770*/ , 50, 0);
+  int L2 = map(analogRead(A2), min_A2,max_A2/*40 , 660*/ , 50, 0);
+  int L3 = map(analogRead(A1), min_A1,max_A1/*45 , 700*/ , 50, 0);
+  int R3 = map(analogRead(A6), min_A6,max_A6/*40 , 700*/ , 50, 0);
+  int L4 = map(analogRead(A0), min_A0,max_A0/*45 , 700*/ , 50, 0);
+  int R4 = map(analogRead(A7), min_A7,max_A7/*40 , 700*/ , 50, 0);
+  
+
+  lf_err=0.125*(L1-R1)+0.25*(L2-R2)+0.5*(L3-R3)+1*(L4-R4);
+
+  int lf_dif = lf_err * kp + (lf_err - lf_prverr) * kd + (lf_err + lf_prverr)* ki;
+  
+  mtr_cmd((speed - lf_dif/2.5),(speed + lf_dif/2.5));
+
+  lf_prverr = lf_err;
+
+  
+ 
+}
+
 
 void bwd_line_flw() {//White line
 
@@ -1201,19 +1463,8 @@ void bwd_line_flw() {//White line
   lf_err=0.125*(L1-R1)+0.25*(L2-R2)+0.5*(L3-R3)+1*(L4-R4);
 
   int lf_dif = lf_err * kp + (lf_err - lf_prverr) * kd + (lf_err + lf_prverr)* ki;
-  Serial.print("ERR ");
-  Serial.print(lf_dif);
-  Serial.print(" ");
-  Serial.print("Kp ");
-  Serial.println(kp);
-
-  Serial3.print("ERR ");
-  Serial3.print(lf_dif);
-  Serial3.print(" ");
-  Serial3.print("Kp ");
-  Serial3.println(kp);
   
-  mtr_cmd(-1*(80 - lf_dif/2.5),-1*(80 + lf_dif/2.5));
+  mtr_cmd(-1*(80 + lf_dif/2),-1*(80 - lf_dif/2));
 
   lf_prverr = lf_err;
 
@@ -1323,14 +1574,14 @@ void line_flw_bwd() {
 
   int lf_dif = lf_bwd_err * kp + (lf_bwd_err - lf_bwd_prverr) * kd;
 
-  mtr_cmd(-1*(85 - lf_dif/2), -1*(85 + lf_dif/2));
+  mtr_cmd(-1*(80 - lf_dif/2.5), -1*(80 + lf_dif/2.5));
 
   lf_bwd_prverr = lf_bwd_err;
 
 }
 
 void line_flw_fwd() {
-  float kp = 0.01;
+  float kp = 0.1;
   float kd = 0.0001;
 
   int R4 = map(analogRead(A7), min_A7 , max_A7 , 0, -400);
@@ -1440,164 +1691,31 @@ void brk(){
 
 
 
-///////////////////////////////////////////////////////////////////Calibrate///////////////////////////////////////////////////////////////////////
-
-void cal() {
-  min_A8 = 1024;
-  min_A0 = 1024;
-  min_A1 = 1024;
-  min_A2 = 1024;
-  min_A3 = 1024;
-  min_A4 = 1024;
-  min_A5 = 1024;
-  min_A6 = 1024;
-  min_A7 = 1024;
-  min_A9 = 1024;
-
- 
-  for (int i = 0; i < 5000; i++) {
-    //Serial.println("calibrating");
-    int A8_Reading = analogRead(A8);
-    int A7_Reading = analogRead(A7);
-    int A6_Reading = analogRead(A6);
-    int A5_Reading = analogRead(A5);
-    int A4_Reading = analogRead(A4);
-    int A3_Reading = analogRead(A3);
-    int A2_Reading = analogRead(A2);
-    int A1_Reading = analogRead(A1);
-    int A0_Reading = analogRead(A0);
-    int A9_Reading = analogRead(A9);
-    
-    if (A8_Reading > max_A8) {
-      max_A8 = A8_Reading;
-    }
-    else if (A8_Reading < min_A8) {
-      min_A8 = A8_Reading;
-    }
-
-    /////////////////////////////////////////////
-    if (A0_Reading > max_A0) {
-      max_A0 = A0_Reading;
-    }
-    else if (A0_Reading < min_A0) {
-      min_A0 = A0_Reading;
-    }
-
-    /////////////////////////////////////////////
-    if (A1_Reading > max_A1) {
-      max_A1 = A1_Reading;
-    }
-    else if (A1_Reading < min_A1) {
-      min_A1 = A1_Reading;
-    }
-    /////////////////////////////////////////////
-
-    
-    if (A2_Reading > max_A2) {
-      max_A2 = A2_Reading;
-    }
-    else if (A2_Reading < min_A2) {
-      min_A2 = A2_Reading;
-    }
-
-
-    /////////////////////////////////////////////
-
-    if (A3_Reading > max_A3) {
-      max_A3 = A3_Reading;
-    }
-    else if (A3_Reading < min_A3) {
-      min_A3 = A3_Reading;
-    }
-
-    /////////////////////////////////////////////
-
-    if (A4_Reading > max_A4) {
-      max_A4 = A4_Reading;
-    }
-    else if (A4_Reading < min_A4) {
-      min_A4 = A4_Reading;
-    }
-
-    ///////////////////////////////////////////
-
-
-    if (A5_Reading > max_A5) {
-      max_A5 = A5_Reading;
-    }
-    else if (A5_Reading < min_A5) {
-      min_A5 = A5_Reading;
-    }
-
-
-    ///////////////////////////////////////////
-
-    if (A6_Reading > max_A6) {
-      max_A6 = A6_Reading;
-    }
-    else if (A6_Reading < min_A6) {
-      min_A6 = A6_Reading;
-    }
-
-    ///////////////////////////////////////////
-
-    if (A7_Reading > max_A7) {
-      max_A7 = A7_Reading;
-    }
-    else if (A7_Reading < min_A7) {
-      min_A7 = A7_Reading;
-    }
-
-    /////////////////////////////////////////////
-    if (A9_Reading > max_A9) {
-      max_A9 = A9_Reading;
-    }
-    else if (A9_Reading < min_A9) {
-      min_A9 = A9_Reading;
-    }
-
-
-  }
-
- 
-  /*Serial.print(min_A7);
-    Serial.print("    ");
-    Serial.print(min_A6);
-    Serial.print("    ");
-    Serial.print(min_A5);
-    Serial.print("    ");
-    Serial.print(min_A4);
-    Serial.print("    ");
-    Serial.print(min_A3);
-    Serial.print("    ");
-    Serial.print(min_A2);
-    Serial.print("    ");
-    Serial.print(min_A1);
-    Serial.print("    ");
-    Serial.print(min_A0);
-    Serial.println("    ");
-
-    Serial.print(max_A7);
-    Serial.print("    ");
-    Serial.print(max_A6);
-    Serial.print("    ");
-    Serial.print(max_A5);
-    Serial.print("    ");
-    Serial.print(max_A4);
-    Serial.print("    ");
-    Serial.print(max_A3);
-    Serial.print("    ");
-    Serial.print(max_A2);
-    Serial.print("    ");
-    Serial.print(max_A1);
-    Serial.print("    ");
-    Serial.print(max_A0);
-    Serial.print("    ");*/
-}
-///////////////////////////////////////////////////////////////////////////Calibrate///////////////////////////////////////////////////////////////////////
-
 
 //////////////////////////////////////////////////////////////////////Forward PID///////////////////////////////////////////////////////////////////////////
+void fwd_enc_distance(float target_distance){
+  int distance_per_pulse = 0.02;
+  ev1 = LEnc.read();
+  ev2 = REnc.read();
+  LnewPosition = 0;
+  RnewPosition = 0;
+  float initial_distance = 0;
+  
+  while (initial_distance <= target_distance) {
+    enc_err = (-1) * LnewPosition + RnewPosition;
+
+    mtr_cmd(110 + enc_err, 110 - enc_err);
+    
+    LnewPosition = LEnc.read() - ev1;
+    RnewPosition = REnc.read() - ev2;
+    
+    float distance_traveled = ((LnewPosition + RnewPosition) / 2.0) * distance_per_pulse;
+    initial_distance += distance_traveled;
+  }
+  mtr_cmd(0, 0);
+}
+
+
 void fwd_enc(int duration){
   ev1 = LEnc.read();
   ev2 = REnc.read();
@@ -1609,7 +1727,7 @@ void fwd_enc(int duration){
   while (elp_time<=duration) {
     enc_err=(-1)*LnewPosition+RnewPosition;
 
-    mtr_cmd(120+enc_err,116-enc_err);
+    mtr_cmd(110+enc_err,110-enc_err);
     
     LnewPosition = LEnc.read() - ev1;
     RnewPosition = REnc.read() - ev2;
@@ -1631,7 +1749,7 @@ void bwd_enc(int duration){
   while (elp_time<=duration) {
     enc_err=(-1)*LnewPosition+RnewPosition;
 
-    mtr_cmd(-1*(116-enc_err),-1*(118+enc_err));
+    mtr_cmd(-1*(100-enc_err),-1*(100+enc_err));
     
     LnewPosition = LEnc.read() - ev1;
     RnewPosition = REnc.read() - ev2;
@@ -1640,9 +1758,7 @@ void bwd_enc(int duration){
 
   mtr_cmd(0, 0);
 }
-
-
-void fwd_enc_spd(int duration,int spd){
+void bwd_enc_givenSpd(int duration , int spd){
   ev1 = LEnc.read();
   ev2 = REnc.read();
   LnewPosition = 0;
@@ -1653,12 +1769,101 @@ void fwd_enc_spd(int duration,int spd){
   while (elp_time<=duration) {
     enc_err=(-1)*LnewPosition+RnewPosition;
 
-    mtr_cmd(spd+enc_err,spd-enc_err);
+    mtr_cmd(-1*(spd-enc_err),-1*(spd+enc_err));
     
     LnewPosition = LEnc.read() - ev1;
     RnewPosition = REnc.read() - ev2;
     elp_time=millis()-stt_time;
   }
+
+  mtr_cmd(0, 0);
+}
+void fwd_enc_givenSpd(int duration , int spd){
+  ev1 = LEnc.read();
+  ev2 = REnc.read();
+  LnewPosition = 0;
+  RnewPosition = 0;
+  elp_time=0;
+  stt_time=millis();
+
+  while (elp_time<=duration) {
+    enc_err=(-1)*LnewPosition+RnewPosition;
+
+    mtr_cmd((spd+enc_err),(spd-enc_err));
+    
+    LnewPosition = LEnc.read() - ev1;
+    RnewPosition = REnc.read() - ev2;
+    elp_time=millis()-stt_time;
+  }
+
+  mtr_cmd(0, 0);
+}
+
+
+
+void bwd_enc_spd(float target_distance, int spd) {  
+  LEnc.readAndReset();
+  REnc.readAndReset();
+  int ev1bwd = LEnc.read();
+  int ev2bwd = REnc.read();
+  LnewPosition = 0;
+  RnewPosition = 0;
+  float distance_traveled = 0;
+  
+  while (distance_traveled <= target_distance) { // Adjusted condition for backward movement
+    
+    
+    
+    enc_err = (-1) * LnewPosition + RnewPosition;
+
+    mtr_cmd((-1)*(spd - enc_err), (-1)*(spd + enc_err)); // Adjusted motor commands for backward movement
+
+    LnewPosition =   LEnc.read() - ev1bwd;
+    RnewPosition =  REnc.read() - ev2bwd ;
+    
+  //  Serial.print(" EV(L:R): ");
+  // Serial.print(ev1);
+  // Serial.print(":");
+  // Serial.println(ev2);
+  // Serial.print(" Encoder Value(L:R): ");
+  // Serial.print(LnewPosition);
+  // Serial.print(":");
+  // Serial.println(RnewPosition);
+    
+  distance_traveled = ((LnewPosition + RnewPosition) / 2.0) * 0.02; // Negated distance_traveled for correct backward movement
+  Serial.println(distance_traveled);
+    
+    delay(0);
+  }
+  mtr_cmd(0, 0);
+}
+
+
+
+
+void fwd_enc_spd(float target_distance,int spd){
+  LEnc.readAndReset();
+  REnc.readAndReset();
+  int ev1fwd = LEnc.read();
+  int ev2fwd = REnc.read();
+  LnewPosition = 0;
+  RnewPosition = 0;
+  float distance_traveled = 0;
+  
+  while (distance_traveled <= target_distance) {
+    enc_err = (-1) * LnewPosition + RnewPosition;
+
+    mtr_cmd(spd + enc_err, spd - enc_err);
+    
+    LnewPosition = LEnc.read() - ev1fwd;
+    RnewPosition = REnc.read() - ev2fwd;
+    
+    distance_traveled = (-1)*((LnewPosition + RnewPosition) / 2.0) * 0.02;
+    
+    Serial.println(distance_traveled);
+    delay(0);
+  }
+  mtr_cmd(0, 0);
 }
 //////////////////////////////////////////////////////////////////////Forward PID///////////////////////////////////////////////////////////////////////////
 
@@ -1882,3 +2087,159 @@ int colorDetect2() {
   //    Serial.println();
   //    delay(100);
 }
+///////////////////////////////////////////////////////////////////Calibrate///////////////////////////////////////////////////////////////////////
+
+void cal() {
+  min_A8 = 1024;
+  min_A0 = 1024;
+  min_A1 = 1024;
+  min_A2 = 1024;
+  min_A3 = 1024;
+  min_A4 = 1024;
+  min_A5 = 1024;
+  min_A6 = 1024;
+  min_A7 = 1024;
+  min_A9 = 1024;
+
+ 
+  for (int i = 0; i < 5000; i++) {
+    //Serial.println("calibrating");
+    int A8_Reading = analogRead(A8);
+    int A7_Reading = analogRead(A7);
+    int A6_Reading = analogRead(A6);
+    int A5_Reading = analogRead(A5);
+    int A4_Reading = analogRead(A4);
+    int A3_Reading = analogRead(A3);
+    int A2_Reading = analogRead(A2);
+    int A1_Reading = analogRead(A1);
+    int A0_Reading = analogRead(A0);
+    int A9_Reading = analogRead(A9);
+    
+    if (A8_Reading > max_A8) {
+      max_A8 = A8_Reading;
+    }
+    else if (A8_Reading < min_A8) {
+      min_A8 = A8_Reading;
+    }
+
+    /////////////////////////////////////////////
+    if (A0_Reading > max_A0) {
+      max_A0 = A0_Reading;
+    }
+    else if (A0_Reading < min_A0) {
+      min_A0 = A0_Reading;
+    }
+
+    /////////////////////////////////////////////
+    if (A1_Reading > max_A1) {
+      max_A1 = A1_Reading;
+    }
+    else if (A1_Reading < min_A1) {
+      min_A1 = A1_Reading;
+    }
+    /////////////////////////////////////////////
+
+    
+    if (A2_Reading > max_A2) {
+      max_A2 = A2_Reading;
+    }
+    else if (A2_Reading < min_A2) {
+      min_A2 = A2_Reading;
+    }
+
+
+    /////////////////////////////////////////////
+
+    if (A3_Reading > max_A3) {
+      max_A3 = A3_Reading;
+    }
+    else if (A3_Reading < min_A3) {
+      min_A3 = A3_Reading;
+    }
+
+    /////////////////////////////////////////////
+
+    if (A4_Reading > max_A4) {
+      max_A4 = A4_Reading;
+    }
+    else if (A4_Reading < min_A4) {
+      min_A4 = A4_Reading;
+    }
+
+    ///////////////////////////////////////////
+
+
+    if (A5_Reading > max_A5) {
+      max_A5 = A5_Reading;
+    }
+    else if (A5_Reading < min_A5) {
+      min_A5 = A5_Reading;
+    }
+
+
+    ///////////////////////////////////////////
+
+    if (A6_Reading > max_A6) {
+      max_A6 = A6_Reading;
+    }
+    else if (A6_Reading < min_A6) {
+      min_A6 = A6_Reading;
+    }
+
+    ///////////////////////////////////////////
+
+    if (A7_Reading > max_A7) {
+      max_A7 = A7_Reading;
+    }
+    else if (A7_Reading < min_A7) {
+      min_A7 = A7_Reading;
+    }
+
+    /////////////////////////////////////////////
+    if (A9_Reading > max_A9) {
+      max_A9 = A9_Reading;
+    }
+    else if (A9_Reading < min_A9) {
+      min_A9 = A9_Reading;
+    }
+
+
+  }
+
+ 
+  /*Serial.print(min_A7);
+    Serial.print("    ");
+    Serial.print(min_A6);
+    Serial.print("    ");
+    Serial.print(min_A5);
+    Serial.print("    ");
+    Serial.print(min_A4);
+    Serial.print("    ");
+    Serial.print(min_A3);
+    Serial.print("    ");
+    Serial.print(min_A2);
+    Serial.print("    ");
+    Serial.print(min_A1);
+    Serial.print("    ");
+    Serial.print(min_A0);
+    Serial.println("    ");
+
+    Serial.print(max_A7);
+    Serial.print("    ");
+    Serial.print(max_A6);
+    Serial.print("    ");
+    Serial.print(max_A5);
+    Serial.print("    ");
+    Serial.print(max_A4);
+    Serial.print("    ");
+    Serial.print(max_A3);
+    Serial.print("    ");
+    Serial.print(max_A2);
+    Serial.print("    ");
+    Serial.print(max_A1);
+    Serial.print("    ");
+    Serial.print(max_A0);
+    Serial.print("    ");*/
+}
+///////////////////////////////////////////////////////////////////////////Calibrate///////////////////////////////////////////////////////////////////////
+
