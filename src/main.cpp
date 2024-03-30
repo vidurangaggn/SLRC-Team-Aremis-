@@ -92,7 +92,7 @@ long ev1;
 long ev2;
 long enc_err;
 
-int flag = 0;
+int flag = 10;
 
 //Run Switch
 #define run_sw 23
@@ -210,6 +210,7 @@ int captureCube();
 void bwd_line_flw();
 void line_flw_given_spd(int speed);
 void close_arm();
+void trnCamera();
 
 
 void setup() {
@@ -292,6 +293,7 @@ void setup() {
   // }
   fwd_enc(400);
   //fwd_enc_spd(6,80);
+  //trn_rgt();
   
   //ARM test
   // catch_obj();
@@ -482,7 +484,7 @@ void loop() {
       delay(200);
       fwd_enc(200);
       buzz();
-      if(!(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a)){
+      if((DL5!=a && DL4!=a && DL3!=a && DL2!=a && DR5!=a && DR4!=a && DR3!=a && DR2!=a)){
          bwd_enc(100);
          buzz();
          if(!trnSlightlyrgt(2000)){
@@ -604,7 +606,7 @@ void loop() {
           delay(200);
         }  
         fwd_enc(300);
-        if(!(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a)){
+        if((DL5!=a && DL4!=a && DL3!=a && DL2!=a && DR5!=a && DR4!=a && DR3!=a && DR2!=a)){
          bwd_enc(200);
          if(!trnSlightlyrgt(2000)){
             trnSlightlylft(4000);
@@ -695,13 +697,13 @@ void loop() {
     brk();
     delay(500);
     fwd_enc_spd(10,90);
-    if(!(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a)){
+    if((DL5!=a && DL4!=a && DL3!=a && DL2!=a && DR5!=a && DR4!=a && DR3!=a && DR2!=a)){
          bwd_enc(100);
          buzz();
          if(!trnSlightlyrgt(2000)){
             trnSlightlylft(4000);
          }
-         fwd_enc(100);
+         line_flw_dur(100);
       }
     delay(500);
     dgtl();
@@ -769,7 +771,7 @@ void loop() {
     flag = 10;
 
 
-  }else if(flag == 10){//go to the second cube selection area
+  }else if(flag == 10){//go to the trash Yard
     dgtl();
     while(true){
       if(  DL4==a && DL3==a && DL2==a && DR4==a && DR3==a && DR2==a){
@@ -796,14 +798,70 @@ void loop() {
       }
       brk();
       delay(500);
-      fwd_enc(350);
-      trnToWhiteLinergt();
+      fwd_enc(300);
       delay(200);
 
-      flag = 11;
+      dgtl();
+      while(true){
+        if(DL3!=a && DL2!=a && DL1!=a && DR1!=a && DR3!=a && DR2!=a){
+            break; 
+        }
+        line_flw();
+        dgtl();
+
+        
+      }
+      brk();
+      delay(500);
+      fwd_enc_spd(23,90);
+      delay(500);
+      //get reading from the camera
+      trnCamera();
+      delay(500);
+      trn_rgt();
+      delay(200);
+      bwd_enc(280);
+      delay(200);
+      trnCamera();
+      delay(500);
+      trn_rgt();
+      delay(500);
+      trnCamera();
+      delay(500);
+      fwd_enc(250);
+
+      if( DL3!=a && DL2!=a && DL1!=a && DR1!=a && DR3!=a && DR2!=a){
+         fwd_enc(100);
+         if(!trnSlightlyrgt(2000)){
+          trnSlightlylft(4000);
+         }
+         line_flw_dur(200);
+      }
+
+      //get our from trash yard
+     dgtl();
+      while(true){
+        if((DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a)){
+            break; 
+        }
+        line_flw();
+        dgtl();
+        
+      }
+
+      brk();
+      delay(500);
+      fwd_enc(350);
+      delay(500);
+      trnToWhiteLinelft();
+      delay(200);
+
+      flag = 12;
 
 
-  }else if(flag == 11){ // Second cube selection area functions
+  }else if(flag == 12){ // Second cube selection area functions
+
+    digitalWrite(objDetectorReset, HIGH);
       dgtl();
     while(true){
       if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
@@ -829,7 +887,7 @@ void loop() {
           if(!metal){//go right if not go left
             brk();
             delay(500);
-            fwd_enc(500);
+            fwd_enc(450);
             delay(500);
             trnToWhiteLine180();
             
@@ -868,9 +926,9 @@ void loop() {
       
 
       
-      flag = 12;
+      flag = 13;
 
-  }else if(flag == 12){//carry cube to the hole
+  }else if(flag == 13){//carry cube to the hole
     dgtl();
     while(true){
       if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
@@ -931,10 +989,76 @@ void loop() {
     delay(500);
     fwd_enc(350);
     delay(200);
+    trnToWhiteLinergt();
+
+    flag = 14;
+
+
+  }else if( flag == 14){//get ball
+    dgtl();
+    while(true){
+      if(DR4==a && DR3==a && DR2==a && DL2==a && DL3==a && DL4==a ){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+    brk();
+    delay(500);
+    fwd_enc_spd(11,90)
+    delay(500);
     trnToWhiteLinelft();
 
-    flag = 13;
+    while(true){
+      if(getDistance()<15){
+          break; 
+      }
+      line_flw();
+      delay(10);
 
+    }
+
+    brk();
+    delay(500);
+    catchBall();
+    delay(500);
+    bwd_enc(100);
+    delay(200);
+    trnToWhiteLine180();
+    delay(200);
+
+    dgtl();
+    while (true)
+    {
+      if(DR5==a && DR4==a && DR3==a && DR2==a && DL5==a && DL4==a && DL3==a && DL2==a){
+          break; 
+
+      }
+      line_flw();
+      dgtl();
+    }
+
+    brk();
+    delay(500);
+    fwd_enc_spd(11,90);
+    delay(500);
+
+    dgtl();
+    while(true){
+      if(DR5==a && DR4==a && DR3==a && DR2==a && DL2==a && DL3==a && DL4==a && DL5==a ){
+          break; 
+      }
+      line_flw();
+      dgtl();
+    }
+
+    brk();
+    delay(500);
+    fwd_enc_spd(5,90);//distance to middle of the circle 
+    delay(500);
+
+    
+    flag=15;
 
   }
 
@@ -1082,7 +1206,7 @@ int getDistance() {
 /////////////////////////////////////////////////////////////////////////////Turn///////////////////////////////////////////////////////////////////////////
 void trn_Precise_180(){
 
-  int enc_val=800;
+  int enc_val=825;
   mtr_cmd(0, 0);
   delay(1000);
 
@@ -1171,12 +1295,13 @@ void trn_lft() {
 
 void trn_rgt() {
 
-  int enc_val = 560;
+  int enc_val = 582;
   
 
   mtr_cmd(0, 0);
   delay(1000);
-
+  LEnc.readAndReset();
+  REnc.readAndReset();
   ev1 = LEnc.read();
   ev2 = REnc.read();
   LnewPosition = 0;
@@ -1193,7 +1318,7 @@ void trn_rgt() {
   mtr_cmd(0, 0);
   delay(1000);
 
-  fwd_enc(175);  
+   
   
 }
 ///////////////////////////Precise Right Turn///////////////////////////////
@@ -1359,7 +1484,7 @@ void drop_obj() {
 }
 
 void arm_down(){
-  for(int i=50 ; i<=138 ; i++){
+  for(int i=50 ; i<=106 ; i++){
     armY.write(i);
     delay(10);
   }
@@ -1377,7 +1502,7 @@ void close_arm(){
 }
 
 void arm_up(){
-  for(int i=138;i>=50;i--){
+  for(int i=106;i>=50;i--){
     armY.write(i);
     delay(10);
   }
