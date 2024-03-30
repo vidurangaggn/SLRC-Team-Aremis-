@@ -17,6 +17,11 @@ Encoder REnc(2, 3);
 
 #define start_but 51 //start button
 
+#define camOp A12
+//PWM input for Cuboid sizes  
+
+#define camON 43
+
 //Arm 
 #define armY_Pin 10
 #define armX_Pin 11
@@ -25,6 +30,11 @@ Encoder REnc(2, 3);
 Servo armY;
 Servo armX;
 Servo cam;
+
+//Marks Leds
+#define GREEN 45
+#define RED 37
+#define BLUE 35
 
 //Front Ultra Sonic Sensor
 #define trigPinFront 4
@@ -92,7 +102,7 @@ long ev1;
 long ev2;
 long enc_err;
 
-int flag = 10;
+int flag = 0;
 
 //Run Switch
 #define run_sw 23
@@ -194,6 +204,7 @@ void line_flw_fwd();
 void catch_obj();
 void drop_obj();
 void arm_up();
+void arm_up_shoot();
 void arm_down();
 void grab_obj();
 void release_obj();
@@ -211,7 +222,7 @@ void bwd_line_flw();
 void line_flw_given_spd(int speed);
 void close_arm();
 void trnCamera();
-
+void catchBall();
 
 void setup() {
 
@@ -224,6 +235,9 @@ void setup() {
  
  //Metal detector
  pinMode(metalDetector, INPUT);
+
+ //cam OP
+ pinMode(camOp, OUTPUT);
   
   //Servo (Arms)
   pinMode(armY_Pin, OUTPUT);
@@ -235,8 +249,8 @@ void setup() {
 
 
   armX.write(180);
-  armY.write(20);
-  cam.write(45);
+  armY.write(10);
+  cam.write(90);
 
   pinMode(17,OUTPUT);//Buzzer
   pinMode(run_sw, INPUT);//Run Switch
@@ -244,6 +258,8 @@ void setup() {
   pinMode(objType, INPUT);//Object Type
 
   digitalWrite(objDetectorReset, LOW);
+
+  pinMode(camON, OUTPUT);
 
 
 
@@ -500,6 +516,7 @@ void loop() {
     delay(100);
     buzz();
      
+    dgtl();
     while(true){
       if((DR5==a && DR4==a && DR3==a && DR2==a) || (DL5==a && DL4==a && DL3==a && DL2==a)){
           break; 
@@ -513,12 +530,20 @@ void loop() {
          fwd_enc(320);
          trnToWhiteLinergt();
         delay(200);
-        line_flw_dur(800);
+        
       }else{
         fwd_enc(320);
         trnToWhiteLinelft();
         delay(200);
-        line_flw_dur(800);
+        
+      }
+      dgtl();
+      while(true){
+        if(DL5==a && DL4==a  && DR5==a && DR4==a ){
+            break; 
+        }
+        line_flw();
+        dgtl();
       }
       
       flag = 6;
@@ -526,13 +551,7 @@ void loop() {
 
   }else if(flag == 6){//Object detection Circle
       digitalWrite(objDetectorReset, HIGH);
-      while(true){
-        if(DR5==a && DR4==a && DL4==a && DL5==a){
-          break;
-        }
-        line_flw_circle();
-        dgtl();
-      }
+      
 
       brk();
       delay(500);
@@ -540,7 +559,7 @@ void loop() {
       trnToWhiteLinelft();
       delay(200);
       
-
+      dgtl();
       while(true){
         if(DL5==a && DL4==a && DL3==a && DL2==a){
           break;
@@ -586,6 +605,7 @@ void loop() {
           delay(200);
           line_flw_dur(500);
         }
+        dgtl();
         while(true)
         {
           if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
@@ -716,9 +736,9 @@ void loop() {
     }
     brk();
     delay(500);
-    fwd_enc(400);
+    fwd_enc(300);
     trnToWhiteLinelft();
-
+    delay(200);
     
     while (true){//drop and push obj to the cave
       if(getDistance()<15){
@@ -747,8 +767,9 @@ void loop() {
     bwd_enc(250);
     delay(200);
     arm_up();
+    release_obj();
     delay(200);
-    line_flw_dur(200);
+    line_flw_dur(150);
     delay(500);
     trnToWhiteLine180();
  
@@ -764,7 +785,7 @@ void loop() {
     }
     brk();
     delay(500);
-    fwd_enc(350);
+    fwd_enc(280);
     delay(200);
     trnToWhiteLinelft();
 
@@ -813,24 +834,25 @@ void loop() {
       }
       brk();
       delay(500);
-      fwd_enc_spd(23,90);
+      fwd_enc_spd(25,90);
+      delay(500);
+      digitalWrite(camON, HIGH);
       delay(500);
       //get reading from the camera
       trnCamera();
       delay(500);
       trn_rgt();
       delay(200);
-      bwd_enc(280);
-      delay(200);
       trnCamera();
       delay(500);
       trn_rgt();
       delay(500);
       trnCamera();
       delay(500);
-      fwd_enc(250);
+      fwd_enc_spd(10,90);
+      digitalWrite(camOp, HIGH);
 
-      if( DL3!=a && DL2!=a && DL1!=a && DR1!=a && DR3!=a && DR2!=a){
+      while( DL3!=a && DL2!=a && DL1!=a && DR1!=a && DR3!=a && DR2!=a){
          fwd_enc(100);
          if(!trnSlightlyrgt(2000)){
           trnSlightlylft(4000);
@@ -861,8 +883,7 @@ void loop() {
 
   }else if(flag == 12){ // Second cube selection area functions
 
-    digitalWrite(objDetectorReset, HIGH);
-      dgtl();
+    dgtl();
     while(true){
       if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
           break; 
@@ -970,7 +991,7 @@ void loop() {
     delay(200);
     arm_up();
     delay(200);
-    line_flw_dur(200);
+    line_flw_dur(150);
     delay(500);
     trnToWhiteLine180();
 
@@ -1005,7 +1026,7 @@ void loop() {
     }
     brk();
     delay(500);
-    fwd_enc_spd(11,90)
+    fwd_enc_spd(11,90);
     delay(500);
     trnToWhiteLinelft();
 
@@ -1020,7 +1041,11 @@ void loop() {
 
     brk();
     delay(500);
-    catchBall();
+    arm_down();
+    delay(500);
+    grab_obj();
+    delay(500);
+    arm_up_shoot();
     delay(500);
     bwd_enc(100);
     delay(200);
@@ -1056,6 +1081,7 @@ void loop() {
     delay(500);
     fwd_enc_spd(5,90);//distance to middle of the circle 
     delay(500);
+    armY.write(100);
 
     
     flag=15;
@@ -1145,7 +1171,7 @@ int captureCube(){
       if(DL4==a && DL3==a && DL2==a && DL1==a && DR1==a && DR4==a && DR3==a && DR2==a ){
           break; 
       } 
-      line_flw_bwd();
+      bwd_enc_spd(1,80);
       dgtl();
       
     }
@@ -1156,9 +1182,9 @@ int captureCube(){
 
 /////////////////////////////////////////Camera Functionalities /////////////////////////////////////////
 void trnCamera(){
-  for(int i = 45; i<135; i++){
+  for(int i = 30; i<150; i+=15){
     cam.write(i);
-    delay(100);
+    delay(5000);
   }
 
 }
@@ -1266,7 +1292,7 @@ void trn_180(){
 
 
 void trn_lft() {
-  int enc_val=560;
+  int enc_val=595;
   
 
   mtr_cmd(0, 0);
@@ -1295,7 +1321,7 @@ void trn_lft() {
 
 void trn_rgt() {
 
-  int enc_val = 582;
+  int enc_val = 612;
   
 
   mtr_cmd(0, 0);
@@ -1484,7 +1510,7 @@ void drop_obj() {
 }
 
 void arm_down(){
-  for(int i=50 ; i<=106 ; i++){
+  for(int i=50 ; i<=144 ; i++){
     armY.write(i);
     delay(10);
   }
@@ -1492,7 +1518,7 @@ void arm_down(){
 }
 
 void grab_obj(){
-  armX.write(57);
+  armX.write(54);
   delay(300);
 
 }
@@ -1502,7 +1528,13 @@ void close_arm(){
 }
 
 void arm_up(){
-  for(int i=106;i>=50;i--){
+  for(int i=144;i>=50;i--){
+    armY.write(i);
+    delay(10);
+  }
+}
+void arm_up_shoot(){
+  for(int i=144;i>=10;i--){
     armY.write(i);
     delay(10);
   }
@@ -1511,6 +1543,11 @@ void arm_up(){
 void release_obj(){
   armX.write(180);
   delay(300);
+
+}
+
+void catchBall(){
+
 
 }
 
