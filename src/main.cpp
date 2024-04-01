@@ -205,6 +205,7 @@ void catch_obj();
 void drop_obj();
 void arm_up();
 void arm_up_shoot();
+void grab_ball();
 void arm_down();
 void grab_obj();
 void release_obj();
@@ -250,7 +251,7 @@ void setup() {
 
   armX.write(180);
   armY.write(10);
-  cam.write(90);
+  cam.write(135);
 
   pinMode(17,OUTPUT);//Buzzer
   pinMode(run_sw, INPUT);//Run Switch
@@ -451,7 +452,7 @@ void loop() {
 
     dgtl();
     while(true){
-      if(DL5==a && DL4==a && DL3==a && DL2==a && DR5==a && DR4==a && DR3==a && DR2==a){
+      if(DL4==a && DL3==a && DL2==a && DR4==a && DR3==a && DR2==a){
           break; 
       }
       line_flw();
@@ -836,6 +837,7 @@ void loop() {
       delay(500);
       fwd_enc_spd(25,90);
       delay(500);
+      digitalWrite(objDetectorReset, HIGH);
       digitalWrite(camON, HIGH);
       delay(500);
       //get reading from the camera
@@ -1043,7 +1045,7 @@ void loop() {
     delay(500);
     arm_down();
     delay(500);
-    grab_obj();
+    grab_ball();
     delay(500);
     arm_up_shoot();
     delay(500);
@@ -1518,7 +1520,13 @@ void arm_down(){
 }
 
 void grab_obj(){
-  armX.write(54);
+  armX.write(53);
+  delay(300);
+
+}
+
+void grab_ball(){
+  armX.write(25);
   delay(300);
 
 }
